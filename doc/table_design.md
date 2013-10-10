@@ -45,14 +45,15 @@ meta-tables that have to be updated and populated to use the visualization.
 
 Plot location describes the names of the plot _location_ for each point.  All
 plots are described as points.  Geometry is stored as OGC well-known text
-geometry (POINT( x y )).
+geometry (POINT( x y )).  Plot type may be used to extract other data from
+tables.
 
 | plot\_id | wkt\_geometry              | plot\_type |
 | -------- | -------------------------- | ---------- |
 | KYLE\_1  | POINT(-113.99 47.01)       | CUP\_VANE  |
 | KYLE\_2  | POINT(-114.0043 45.044856) | FBP        |
 
-_PRIMARY\_KEY(plot\_id)_
+PRIMARY\_KEY(plot\_id)
 
 ### Observation tables (obs\_tables)
 
@@ -67,7 +68,7 @@ human-readable strings for each column, comma separated.
 | cup\_vane\_obs   | 'dir,speed,gust'          | 'Direction,Speed(mph),Gust(mph)' |
 | fbp\_obs         | 'tmp,ksh,ksv,mtr,mtt,nar' | 'Temperature(C),Horizontal Wind Speed(m/s),Vertical Wind Speed(m/s),Medtherm Radiant Flux(kw/m^2),Medtherm Total Heat Flux(kw/m^2),Narrow Angle Radiometer(kw/m^2)' |
 
-_PRIMARY\_KEY(obs\_table\_name)
+PRIMARY\_KEY(obs\_table\_name)
 
 ### Event table
 
@@ -80,7 +81,7 @@ specifies the start and end time for some event for subsetting temporally.
 | 'RX Cadre'    | 'S4'        | '20120914T1822' | '20120914T1930' |
 
 
-_PRIMARY\_KEY(project\_name, event\_name)_
+PRIMARY\_KEY(project\_name, event\_name)
 
 #### _Notes_\:
 
@@ -95,8 +96,9 @@ following are examples.
 
 #### Table cup\_vane\_obs
 
-| plot\_id | timestamp                 | dir | speed | gust |
-| -------- | ------------------------- | --- | ----- | ---- |
-| A10      | 'Sep 12, 2012 08:34:32 PM | 182 | 19    | 33   |
-| A10      | 'Sep 12, 2012 08:34:35 PM | 166 | 12    | 15   |
+|project\_name | plot\_id | timestamp                 | dir | speed | gust |
+| ------------ | -------- | ------------------------- | --- | ----- | ---- |
+| 'RX Cadre'   | A10      | 'Sep 12, 2012 08:34:32 PM | 182 | 19    | 33   |
+| 'RX_Cadre'   | A10      | 'Sep 12, 2012 08:34:35 PM | 166 | 12    | 15   |
 
+PRIMARY\_KEY(plot\_id, timestamp)
