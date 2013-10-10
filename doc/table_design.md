@@ -53,7 +53,7 @@ tables.
 | KYLE\_1  | POINT(-113.99 47.01)       | CUP\_VANE  |
 | KYLE\_2  | POINT(-114.0043 45.044856) | FBP        |
 
-_PRIMARY\_KEY(plot\_id)_
+PRIMARY\_KEY(plot\_id)
 
 ### Observation tables (obs\_tables)
 
@@ -68,7 +68,7 @@ human-readable strings for each column, comma separated.
 | cup\_vane\_obs   | 'dir,speed,gust'          | 'Direction,Speed(mph),Gust(mph)' |
 | fbp\_obs         | 'tmp,ksh,ksv,mtr,mtt,nar' | 'Temperature(C),Horizontal Wind Speed(m/s),Vertical Wind Speed(m/s),Medtherm Radiant Flux(kw/m^2),Medtherm Total Heat Flux(kw/m^2),Narrow Angle Radiometer(kw/m^2)' |
 
-_PRIMARY\_KEY(obs\_table\_name)
+PRIMARY\_KEY(obs\_table\_name)
 
 ### Event table
 
@@ -81,7 +81,7 @@ specifies the start and end time for some event for subsetting temporally.
 | 'RX Cadre'    | 'S4'        | '20120914T1822' | '20120914T1930' |
 
 
-_PRIMARY\_KEY(project\_name, event\_name)_
+PRIMARY\_KEY(project\_name, event\_name)
 
 #### _Notes_\:
 
@@ -101,4 +101,4 @@ following are examples.
 | 'RX Cadre'   | A10      | 'Sep 12, 2012 08:34:32 PM | 182 | 19    | 33   |
 | 'RX_Cadre'   | A10      | 'Sep 12, 2012 08:34:35 PM | 166 | 12    | 15   |
 
-_PRIMARY\_KEY(plot\_id, timestamp)_
+PRIMARY\_KEY(plot\_id, timestamp)
