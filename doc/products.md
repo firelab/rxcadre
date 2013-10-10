@@ -41,10 +41,10 @@ pre-defined times to subset the data temporally.
 ### CSV files
 
 Subset types
-: Spatial
-: Temporal
-: Event
-: Combinations of above
+ : Spatial
+ : Temporal
+ : Event
+ : Combinations of above
 
 Outputs
 : csv file
