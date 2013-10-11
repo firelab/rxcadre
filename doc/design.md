@@ -40,7 +40,7 @@ The RX Cadre (Prescribed Fire Combustion and Atmospheric Dynamic Research) progr
 
 ### Source Code
 
-The source will be written in Python 2.x.  Python was chosen due to fast implementation time, access to third party modules for graphing (matplotlib), geospatial functionality (GDAL/OGR bindings), and a built in, distributed graphical user interface (Tk), and tight integration with a serverless relational database management system (SQLite).
+The source will be written in Python 2.x.  Python was chosen due to fast implementation time, rich built in modules (csv, argparse), access to third party modules for graphing (matplotlib), geospatial functionality (GDAL/OGR bindings), a built in, distributed graphical user interface (Tk), and tight integration with a serverless relational database management system (SQLite).
 
 ### Data Store
 
