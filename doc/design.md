@@ -33,3 +33,27 @@ For more information, please refer to <http://unlicense.org/>
 -->
 
 ## Purpose
+
+The RX Cadre (Prescribed Fire Combustion and Atmospheric Dynamic Research) program conducted several field experiments in the fall of 2012.  Several datasets were used to quantify fire weather and behavior.  These data include fire behavior observations (air flow, heat flux, air temperature) and weather data (mostly local wind speed and direction).  In order to make research and publishing easier, these data need to be filtered by time and space.  This python module will act as that filter and allow a variety of data extraction means and storage.
+
+## Architecture
+
+### Source Code
+
+The source will be written in Python 2.x.  Python was chosen due to fast implementation time, access to third party modules for graphing (matplotlib), geospatial functionality (GDAL/OGR bindings), and a built in, distributed graphical user interface (Tk), and tight integration with a serverless relational database management system (SQLite).
+
+### Data Store
+
+A local SQLite3 database will serve as an intermediary data store.  Data officially live on a large database that has stored comma separated value files and excel files.  These have to be parsed in order to load them into the data store.  Quick access to data subsetting by time and space are needed.
+
+### Documentation
+
+User and developer documentation will be stored at this github repository in the [doc/](https://github.com/ksshannon/rxcadre/tree/master/doc) directory.  Other documentation may be stored in the wiki.
+
+## Future location
+
+This repository will be migrated to the firelab organization as adoption approaches.
+
+## License
+
+This work is part done as part of US Government employees and contractors as part of official duties and therefore is in the public domain.  See LICENSE.
