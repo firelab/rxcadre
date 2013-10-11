@@ -41,26 +41,26 @@ pre-defined times to subset the data temporally.
 ### CSV files
 
 Subset types
-: Spatial
-: Temporal
-: Event
-: Combinations of above
+* Spatial
+* Temporal
+* Event
+* Combinations of above
 
 Outputs
-: csv file
+* csv file
 
 ### Google Earth kml/kmz
 
 Subset types
-: Spatial
-: Temporal
-: Event
-: Combinations of above
+* Spatial
+* Temporal
+* Event
+* Combinations of above
 
 Outputs
-: kmz file
-: Time series plots
-: Wind roses
+* kmz file
+* Time series plots
+* Wind roses
 
 ### Various Geospatial formats
 
@@ -70,18 +70,18 @@ platform/availability.  The kml/kmz files are generated outside of OGR, not
 within and don't require OGR.
 
 Subset types:
-: Spatial
-: Temporal (averaged)
-: Event
-: Combinations of above
+* Spatial
+* Temporal (averaged)
+* Event
+* Combinations of above
 
 Outputs
-: Various spatial files
-: Point features with temporal averaged data)
+* Various spatial files
+* Point features with temporal averaged data)
 
 Possibility unknown:
-: Time series plots
-: Wind roses
-: Temporal data (essentially a table with a record for each timestamp for a
+* Time series plots
+* Wind roses
+* Temporal data (essentially a table with a record for each timestamp for a
 given plot)
 
