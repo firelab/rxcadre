@@ -6,6 +6,7 @@
 #  Project:  RX Cadre Data Visualization
 #  Purpose:  Import csv data into tables
 #  Author:   Kyle Shannon <kyle@pobox.com>
+#            Kegan Rabil <krabil@yourdatasmarter.com>
 #
 ###############################################################################
 #
@@ -97,7 +98,7 @@ class RxCadre:
         plot_location data if possible.  The import_fx is an optional function
         that does the importing.
         """
-        pass
+        raise NotImplementedError
 
 
 rx = RxCadre()
