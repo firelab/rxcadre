@@ -35,42 +35,70 @@
 #  For more information, please refer to <http://unlicense.org/>
 #
 ###############################################################################
-'''
+"""
 Module for importing spatial time-series data into a searchable format for 
 subsetting in space and time.  Typical import format would be csv files.  The
 values are imported into a sqlite3 database.  'Meta' tables store information
 about what to display.
-'''
+"""
 
 import csv
 import os
+import sqlite3
+
+class RxCadreIOError(Exception):pass
+class RxCadreInvalidDbError(Exception):pass
 
 class RxCadre:
-    '''
+    """
     Main interface for RX Cadre data.
-    '''
+    """
 
-    def init_new_db(filename):
-        '''
+    def init_new_db(self, filename):
+        """
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
-        '''
-        pass
+        """
+        if os.path.exists(filename):
+            raise RxCadreIOError("Database file already exists")
+        db = sqlite3.connect(filename)
+        cursor = db.cursor()
+        sql = """CREATE TABLE plot_location(plot_id TEXT NOT NULL PRIMARY KEY,
+                                            geometry TEXT, plot_type TEXT)"""
+        cursor.execute(sql)
+        sql = """CREATE TABLE event(project_name TEXT,
+                                    event_name TEXT NOT NULL,
+                                    event_start TEXT NOT NULL,
+                                    event_end TEXT NOT NULL,
+                                    PRIMARY KEY(project_name, event_name))"""
+        cursor.execute(sql)
+        sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+                                        geometry_column TEXT NOT NULL,
+                                        obs_cols TEXT NOT NULL,
+                                        obs_col_names TEXT)"""
+        cursor.execute(sql)
+        db.commit()
+        self.check_valid_db(db)
 
-    def check_valid_db(db):
-        '''
+
+    def check_valid_db(self, db):
+        """
         Check the schema of an existing db.  This involves checking the
         metatables, and checking to make sure tables registered in obs_tables
         exist.
-        '''
-        pass
+        """
+        raise RxCadreInvalidDbError("Database is invalid")
 
-    def import_data(db, import_fx=None):
-        '''
+    def import_data(self, db, import_fx=None):
+        """
         Import a new data set into the database.  An obs table should be
         created and registered with obs_tables.  It also should populate the
-        plot_location data if possible.
-        '''
+        plot_location data if possible.  The import_fx is an optional function
+        that does the importing.
+        """
         pass
 
+
+rx = RxCadre()
+rx.init_new_db('test.db')
