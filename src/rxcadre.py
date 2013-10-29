@@ -99,6 +99,3 @@ class RxCadre:
         """
         pass
 
-
-rx = RxCadre()
-rx.init_new_db('test.db')
