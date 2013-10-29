@@ -45,3 +45,32 @@ about what to display.
 import csv
 import os
 
+class RxCadre:
+    '''
+    Main interface for RX Cadre data.
+    '''
+
+    def init_new_db(filename):
+        '''
+        Create a new, empty database with appropriate metatables.  If the file
+        previously exists, we fail before connecting using sqlite.  It must be
+        a new file.
+        '''
+        pass
+
+    def check_valid_db(db):
+        '''
+        Check the schema of an existing db.  This involves checking the
+        metatables, and checking to make sure tables registered in obs_tables
+        exist.
+        '''
+        pass
+
+    def import_data(db, import_fx=None):
+        '''
+        Import a new data set into the database.  An obs table should be
+        created and registered with obs_tables.  It also should populate the
+        plot_location data if possible.
+        '''
+        pass
+
