@@ -36,6 +36,8 @@
 CREATE TABLE plot_location
 (
     plot_id TEXT NOT NULL PRIMARY KEY,
+    x REAL,
+    y REAL,
     geometry TEXT,
     plot_type TEXT
 );
