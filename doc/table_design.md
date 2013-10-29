@@ -48,10 +48,10 @@ plots are described as points.  Geometry is stored as OGC well-known text
 geometry (POINT( x y )).  Plot type may be used to extract other data from
 tables.
 
-| plot\_id | wkt\_geometry              | plot\_type |
-| -------- | -------------------------- | ---------- |
-| KYLE\_1  | POINT(-113.99 47.01)       | CUP\_VANE  |
-| KYLE\_2  | POINT(-114.0043 45.044856) | FBP        |
+| plot\_id | x         | y         | wkt\_geometry              | plot\_type |
+| -------- | --------- | ----------| -------------------------- | ---------- |
+| KYLE\_1  | -113.99   | 47.01     | POINT(-113.99 47.01)       | CUP\_VANE  |
+| KYLE\_2  | -114.0043 | 45.044856 | POINT(-114.0043 45.044856) | FBP        |
 
 PRIMARY\_KEY(plot\_id)
 
