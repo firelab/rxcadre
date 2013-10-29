@@ -100,6 +100,3 @@ class RxCadre:
         """
         raise NotImplementedError
 
-
-rx = RxCadre()
-rx.init_new_db('test.db')
