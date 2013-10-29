@@ -52,6 +52,7 @@ CREATE TABLE event
 CREATE TABLE obs_table
 (
     obs_table_name TEXT NOT NULL,
+    geometry_column TEXT NOT NULL,
     obs_cols TEXT NOT NULL,
     obs_col_names TEXT
 );
