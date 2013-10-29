@@ -96,9 +96,9 @@ following are examples.
 
 #### Table cup\_vane\_obs
 
-|project\_name | plot\_id | timestamp                 | dir | speed | gust |
-| ------------ | -------- | ------------------------- | --- | ----- | ---- |
-| 'RX Cadre'   | A10      | 'Sep 12, 2012 08:34:32 PM | 182 | 19    | 33   |
-| 'RX_Cadre'   | A10      | 'Sep 12, 2012 08:34:35 PM | 166 | 12    | 15   |
+|project\_name | plot\_id | timestamp                  | dir | speed | gust |
+| ------------ | -------- | -------------------------- | --- | ----- | ---- |
+| 'RX Cadre'   | A10      | 'Sep 12, 2012 08:34:32 PM' | 182 | 19    | 33   |
+| 'RX_Cadre'   | A10      | 'Sep 12, 2012 08:34:35 PM' | 166 | 12    | 15   |
 
 PRIMARY\_KEY(plot\_id, timestamp)
