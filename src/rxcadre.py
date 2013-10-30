@@ -89,7 +89,28 @@ class RxCadre:
         metatables, and checking to make sure tables registered in obs_tables
         exist.
         """
-        raise RxCadreInvalidDbError("Database is invalid")
+        con = sqlite3.connect(db)
+        cursor = con.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        cursor_fetch = cursor.fetchall()
+        if (u'plot_location',) in cursor_fetch and (u'event',) in cursor_fetch and (u'obs_table',) in cursor_fetch
+            cursor.execute("select obs_table_name from obs_table")
+            z = cursor.fetchall()
+            int table_number = len(z)
+            if table_number != 0
+                bool name_in = true
+                for i in 0:table_number
+                    if not z[i] in cursor_fetch
+                        name_in = false
+                if name_in == true
+                    print "Success"
+                    #Don't actually print that
+                
+            
+        else
+            
+            #Here's where I stopped
+            raise RxCadreInvalidDbError("Database is invalid")
 
     def import_data(self, db, import_fx=None):
         """
