@@ -92,6 +92,13 @@ class RxCadreTestDb(unittest.TestCase):
         db = self.create_invalid_db()
         self.assertFalse(self.rx.check_valid_db(db))
 
+    def test_db_init_1(self):
+        '''
+        Check internal creation function, this just shouldn't raise any
+        exceptions.
+        '''
+        db = self.rx.init_new_db("")
+
 if __name__ == '__main__':
 
     unittest.main(verbosity=2)

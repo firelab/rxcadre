@@ -80,7 +80,11 @@ class RxCadre:
                                         obs_col_names TEXT)"""
         cursor.execute(sql)
         db.commit()
-        self.check_valid_db(db)
+        valid = self.check_valid_db(db)
+        db.close()
+        if not valid:
+            e = "Failed to create a valid database."
+            raise RxCadreInvalidDbError(e)
 
 
     def check_valid_db(self, db):
