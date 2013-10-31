@@ -123,14 +123,30 @@ class RxCadre:
         data_file = open(file_path,"r")
         header = data_file.readline().split(",")
 
+        sql = """CREATE TABLE my_table("""
+        for i, h in enumerate(header.split(",")):
+            sql += h + ' text'
+            if(i < len(header)):
+                sql += ','
+        sql += ');'
+        
         cursor = con.cursor()
         hold_name = header[0]
-        cursor.execute("CREAT TABLE " + hold_name + "(" + header[0] + ")")
-        for i in range(1,len(header)):
-            cursor.execute("ALTER TABLE " + hold_name + " ADD COLUMN " + json.dumps(header[i]))
 
-        #The line below is what I'm trying to fix
-        cursor.execute("insert into hold_name values (?)", data_file.readline().split(","))
-        cursor.execute("insert into obs_table values(header[0],header[1],header[2],header[3])")
+        cursor.execute(sql)
+    
+        qs = "("+ (len(header)-1)* "?," +"?)"
+        insrt = "insert into " + hold_name+ " values "
+        insrt += qs
+        con.text_factory = str
+        n = 0
+        while (data_file.readline() != None):
+            line = data_file.readline()
+            n = n+1
+            if len(line.split(",")) < len(header):
+                print 'Error at line ' + str(n)
+                break
+            else:
+                cursor.execute(insrt, line.split(","))
 
 
