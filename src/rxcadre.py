@@ -46,6 +46,7 @@ about what to display.
 import csv
 import os
 import sqlite3
+import json
 
 class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
@@ -93,28 +94,50 @@ class RxCadre:
         metatables, and checking to make sure tables registered in obs_tables
         exist.
         """
-        cursor = db.cursor()
-        required_tables = set([u'plot_location', u'event', u'obs_table'])
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        table_names = [t[0] for t in cursor.fetchall()]
-        if not set(table_names) <= required_tables:
-            e = "Database does not contain the required tables, missing:"
-            e += ",".join(required_tables.difference(table_names))
-            return False
-        cursor.execute("select obs_table_name from obs_table")
-        obs_names = cursor.fetchall()
-        for name in obs_names:
-            if n not in table_names:
-                e = "Database is invalid, missing table: %s" % n
-                return False
-        return True
+        con = sqlite3.connect(db)
+        cursor = con.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        cursor_fetch = cursor.fetchall()
+        if (u'plot_location',) in cursor_fetch and (u'event',) in cursor_fetch and (u'obs_table',) in cursor_fetch
+            cursor.execute("select obs_table_name from obs_table")
+            z = cursor.fetchall()
+            int table_number = len(z)
+            if table_number != 0
+                bool name_in = true
+                for i in 0:table_number
+                    if not z[i] in cursor_fetch
+                        name_in = false
+                if name_in == true
+                    print "Success"
+                    #Don't actually print that
+                
+            
+        else
+            
+            
+            raise RxCadreInvalidDbError("Database is invalid")
 
-    def import_data(self, db, import_fx=None):
+    def import_data(self, db, file_path, import_fx=None):
         """
         Import a new data set into the database.  An obs table should be
         created and registered with obs_tables.  It also should populate the
         plot_location data if possible.  The import_fx is an optional function
         that does the importing.
         """
+        con = sqlite3.connect(db)
+        
+        data_file = open(file_path,"r")
+        header = data_file.readline().split(",")
+
+        cursor = con.cursor()
+        hold_name = header[0]
+        cursor.execute("CREAT TABLE " + hold_name + "(" + header[0] + ")")
+        for i in range(1,len(header)):
+            cursor.execute("ALTER TABLE " + hold_name + " ADD COLUMN " + json.dumps(header[i]))
+
+        #The line below is what I'm trying to fix
+        cursor.execute("insert into hold_name values (?)", data_file.readline().split(","))
+        cursor.execute("insert into obs_table values(header[0],header[1],header[2],header[3])")
+        
         raise NotImplementedError
 
