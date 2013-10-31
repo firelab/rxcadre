@@ -82,10 +82,11 @@ class RxCadre:
         cursor.execute(sql)
         db.commit()
         valid = self.check_valid_db(db)
-        db.close()
         if not valid:
+            db.close()
             e = "Failed to create a valid database."
             raise RxCadreInvalidDbError(e)
+        return db
 
 
     def check_valid_db(self, db):
@@ -112,15 +113,14 @@ class RxCadre:
         return True
 
 
-    def create_valid_table(self,file_path,db):
+    def import_rxc_wind_data(self, db, input_csv):
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
-        
+
         #file_path = "C:/Users/krabil/Documents/GitHub/rxcadre/test/test_data.txt"
-        con = sqlite3.connect(db)
-        cursor = con.cursor()
-        con.text_factory = str
-        data_file = open(file_path,"r")
+        cursor = db.cursor()
+        db.text_factory = str
+        data_file = open(input_csv,"r")
         header = data_file.readline().split(",")
         for i in range(0,len(header)):
             header[i] = header[i].replace('\n',"")
@@ -138,9 +138,9 @@ class RxCadre:
             if(i < len(header)-1):
                 sql += ','
         sql += ')'
-        
+
         cursor.execute(sql)
-        
+
         qs = "("+ (len(header)-1)* "?," +"?)"
         insrt = "insert into " + hold_name+ " values "
         insrt += qs

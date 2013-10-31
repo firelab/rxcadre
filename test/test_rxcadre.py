@@ -98,9 +98,21 @@ class RxCadreTestDb(unittest.TestCase):
         exceptions.
         '''
         db = self.rx.init_new_db("")
-        #self.rx.init_new_db("testing1.db")
-        #need to set file_path
-        self.rx.create_valid_table("testing1.db",file_path)
+
+    def test_db_init_2(self):
+        '''
+        Check valid initialization of db.
+        '''
+        db = self.rx.init_new_db("")
+        self.assertTrue(self.rx.check_valid_db(db))
+
+    def test_db_import_1(self):
+        '''
+        Test creating db and importing hobo data.
+        '''
+        db = self.rx.init_new_db("")
+        self.assertNotEqual(db, None)
+        self.rx.import_rxc_wind_data(db, 'test_data.txt')
 
 
 if __name__ == '__main__':
