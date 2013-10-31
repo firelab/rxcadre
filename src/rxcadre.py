@@ -46,7 +46,7 @@ about what to display.
 import csv
 import os
 import sqlite3
-import json
+
 
 class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
@@ -111,42 +111,55 @@ class RxCadre:
                 return False
         return True
 
-    def import_data(self, db, file_path, import_fx=None):
-        """
-        Import a new data set into the database.  An obs table should be
-        created and registered with obs_tables.  It also should populate the
-        plot_location data if possible.  The import_fx is an optional function
-        that does the importing.
-        """
-        con = sqlite3.connect(db)
 
+    def create_valid_table(self,file_path,db):
+        """Create a table from a selected file in the current database.
+        Import the appropriate columns and populate with associated data."""
+        
+        #file_path = "C:/Users/krabil/Documents/GitHub/rxcadre/test/test_data.txt"
+        con = sqlite3.connect(db)
+        cursor = con.cursor()
+        con.text_factory = str
         data_file = open(file_path,"r")
         header = data_file.readline().split(",")
-
-        sql = """CREATE TABLE my_table("""
-        for i, h in enumerate(header.split(",")):
-            sql += h + ' text'
-            if(i < len(header)):
-                sql += ','
-        sql += ');'
-        
-        cursor = con.cursor()
+        for i in range(0,len(header)):
+            header[i] = header[i].replace('\n',"")
+            header[i] = header[i].replace('+',"")
+            header[i] = header[i].replace(":","")
+            header[i] = header[i].replace(")","")
+            header[i] = header[i].replace("(","")
         hold_name = header[0]
 
+        #cursor.execute("drop table "+hold_name)
+
+        sql = "CREATE TABLE "+hold_name+"("
+        for i, h in enumerate(header):
+            sql += h + ' text'
+            if(i < len(header)-1):
+                sql += ','
+        sql += ')'
+        
         cursor.execute(sql)
-    
+        
         qs = "("+ (len(header)-1)* "?," +"?)"
         insrt = "insert into " + hold_name+ " values "
         insrt += qs
-        con.text_factory = str
+
         n = 0
-        while (data_file.readline() != None):
-            line = data_file.readline()
+        line = data_file.readline()
+        while (line != None):
             n = n+1
             if len(line.split(",")) < len(header):
-                print 'Error at line ' + str(n)
                 break
             else:
                 cursor.execute(insrt, line.split(","))
+            line = data_file.readline()
+        cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",header[0:4])
+        #The following is purely a sanity check
+        #cursor.execute("SELECT * FROM obs_table")         
+        #names = cursor.fetchall()
+        #print names, len(names)
+
+    
 
 

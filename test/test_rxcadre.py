@@ -98,45 +98,10 @@ class RxCadreTestDb(unittest.TestCase):
         exceptions.
         '''
         db = self.rx.init_new_db("")
+        #self.rx.init_new_db("testing1.db")
+        #need to set file_path
+        self.rx.create_valid_table("testing1.db",file_path)
 
-    def create_table(db,file_path):
-        db = sqlite3.connect(db)
-        cursor = db.cursor()
-        db.text_factory = str
-        data_file = open(file_path,"r")
-        header = data_file.readline().split(",")
-        for i in range(0,len(header)):
-            header[i] = header[i].replace('\n',"")
-            header[i] = header[i].replace('+',"")
-            header[i] = header[i].replace(":","")
-            header[i] = header[i].replace(")","")
-            header[i] = header[i].replace("(","")
-        hold_name = header[0]
-
-        cursor.execute("drop table "+hold_name)
-
-        sql = "CREATE TABLE "+hold_name+"("
-        for i, h in enumerate(header):
-            sql += h + ' text'
-            if(i < len(header)-1):
-                sql += ','
-        sql += ')'
-        
-        cursor.execute(sql)
-        
-        qs = "("+ (len(header)-1)* "?," +"?)"
-        insrt = "insert into " + hold_name+ " values "
-        insrt += qs
-
-        n = 0
-        line = data_file.readline()
-        while (line != None):
-            n = n+1
-            if len(line.split(",")) < len(header):
-                break
-            else:
-                cursor.execute(insrt, line.split(","))
-            line = data_file.readline()
 
 if __name__ == '__main__':
 
