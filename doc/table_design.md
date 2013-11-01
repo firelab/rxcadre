@@ -48,10 +48,10 @@ plots are described as points.  Geometry is stored as OGC well-known text
 geometry (POINT( x y )).  Plot type may be used to extract other data from
 tables.
 
-| plot\_id | x         | y         | wkt\_geometry              | plot\_type |
-| -------- | --------- | ----------| -------------------------- | ---------- |
-| KYLE\_1  | -113.99   | 47.01     | POINT(-113.99 47.01)       | CUP\_VANE  |
-| KYLE\_2  | -114.0043 | 45.044856 | POINT(-114.0043 45.044856) | FBP        |
+| project\_name | plot\_id | x         | y         | wkt\_geometry              | plot\_type |
+| ------------- | -------- | --------- | ----------| -------------------------- | ---------- |
+| 'RX Cadre'    | KYLE\_1  | -113.99   | 47.01     | POINT(-113.99 47.01)       | CUP\_VANE  |
+| 'RX Cadre'    | KYLE\_2  | -114.0043 | 45.044856 | POINT(-114.0043 45.044856) | FBP        |
 
 PRIMARY\_KEY(plot\_id)
 
@@ -96,9 +96,9 @@ following are examples.
 
 #### Table cup\_vane\_obs
 
-|project\_name | plot\_id | timestamp                  | dir | speed | gust |
-| ------------ | -------- | -------------------------- | --- | ----- | ---- |
-| 'RX Cadre'   | A10      | 'Sep 12, 2012 08:34:32 PM' | 182 | 19    | 33   |
-| 'RX_Cadre'   | A10      | 'Sep 12, 2012 08:34:35 PM' | 166 | 12    | 15   |
+| plot\_id | timestamp                  | dir | speed | gust |
+| -------- | -------------------------- | --- | ----- | ---- |
+| A10      | 'Sep 12, 2012 08:34:32 PM' | 182 | 19    | 33   |
+| A10      | 'Sep 12, 2012 08:34:35 PM' | 166 | 12    | 15   |
 
 PRIMARY\_KEY(plot\_id, timestamp)
