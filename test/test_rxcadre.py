@@ -113,9 +113,8 @@ class RxCadreTestDb(unittest.TestCase):
         db = self.rx.init_new_db("")
         self.assertNotEqual(db, None)
         self.rx.import_rxc_wind_data(db,'test_data.txt')
-        print "one"
         self.assertTrue(self.rx.check_valid_db(db))
-        print "two"
+        
 
 
 if __name__ == '__main__':

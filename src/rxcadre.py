@@ -66,7 +66,7 @@ class RxCadre:
             raise RxCadreIOError("Database file already exists")
         db = sqlite3.connect(filename)
         cursor = db.cursor()
-        sql = """CREATE TABLE plot_location(plot_id TEXT NOT NULL PRIMARY KEY,
+        sql = """CREATE TABLE plot_location(plot_id TEXT, 
                                             geometry TEXT, plot_type TEXT)"""
         cursor.execute(sql)
         sql = """CREATE TABLE event(project_name TEXT,
@@ -117,7 +117,7 @@ class RxCadre:
     def import_rxc_wind_data(self, db, input_csv):
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
-
+        title = input_csv[0:input_csv.index(".")]
         cursor = db.cursor()
         db.text_factory = str
         data_file = open(input_csv,"r")
@@ -133,32 +133,72 @@ class RxCadre:
         #cursor.execute("drop table "+hold_name)
        
 
-        sql = "CREATE TABLE "+hold_name+"("
-        for i, h in enumerate(header):
-            sql += h + ' text'
-            if(i < len(header)-1):
-                sql += ','
-        sql += ')'
+        #sql = "CREATE TABLE "+hold_name+"("
+        #for i, h in enumerate(header):
+        #    sql += h + ' text'
+        #    if(i < len(header)-1):
+        #        sql += ','
+        #sql += ')'
 
-        cursor.execute(sql)
+        #cursor.execute(sql)
 
-        qs = "("+ (len(header)-1)* "?," +"?)"
-        insrt = "insert into " + hold_name+ " values "
-        insrt += qs
+        cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
+                                                     timestamp TEXT, speed TEXT,
+                                                     direction TEXT, gust TEXT)""")
+
+        #qs = "("+ (len(header)-1)* "?," +"?)"
+        #insrt = "insert into " + hold_name+ " values "
+        #insrt += qs
+
+
+        for i in range(0,len(header)):
+            if "Time" in header[i]:
+                    time = i
+            if "PlotID" in header[i]:
+                    plotid = i
+            if "Speed" in header[i]:
+                    speed = i
+            if "Direction" in header[i]:
+                    direc = i
+            if "Gust" in header[i]:
+                    gust = i
+            if "TagID" in header[i]:
+                    tagid = i
+            if "Latitude" in header[i]:
+                    lat = i
+            if "Longitude" in header[i]:
+                    lon = i
+            if "InstrumentID" in header[i]:
+                    instrid = i
+        
 
         n = 0
         line = data_file.readline()
+        line = line.split(",")
+        instr_id = instr_id2 = line[instrid]
         while (line != None):
             n = n+1
-            if len(line.split(",")) < len(header):
+            if len(line) < len(header):
                 break
             else:
-                cursor.execute(insrt, line.split(","))
+                #cursor.execute(insrt, line.split(","))
+                new_data = line[plotid],line[time],line[speed],line[direc],line[gust]
+                cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
+                
+            instr_id = line[instrid]
+            if (instr_id != instr_id2):
+                plot_vals = line[plotid],"POINT("+line[lat]+" "+line[lon]+")",line[tagid]
+                cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
+            
+            instr_id2 = line[instrid]
             line = data_file.readline()
+            line = line.split(",")
 
-        cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",header[0:4])
+        obs_vals = hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
+        cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
+        
         #The following is purely a sanity check
-        #cursor.execute("SELECT * FROM obs_table")         
+        #cursor.execute("SELECT * FROM plot_location")         
         #names = cursor.fetchall()
         #print names, len(names)
 
