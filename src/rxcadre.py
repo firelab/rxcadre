@@ -97,18 +97,19 @@ class RxCadre:
         """
 
         cursor = db.cursor()
-        required_tables = set([u'plot_location', u'event', u'obs_table'])
+        required_tables = set(['plot_location', 'event', 'obs_table'])
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         table_names = [t[0] for t in cursor.fetchall()]
-        if not set(table_names) <= required_tables:
+        if not set(table_names) >= required_tables:
             e = "Database does not contain the required tables, missing:"
             e += ",".join(required_tables.difference(table_names))
             return False
         cursor.execute("select obs_table_name from obs_table")
-        obs_names = cursor.fetchall()
+        
+        obs_names = [o[0] for o in cursor.fetchall()]
         for name in obs_names:
-            if n not in table_names:
-                e = "Database is invalid, missing table: %s" % n
+            if name not in table_names:
+                e = "Database is invalid, missing table: "
                 return False
         return True
 
@@ -117,7 +118,6 @@ class RxCadre:
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
 
-        #file_path = "C:/Users/krabil/Documents/GitHub/rxcadre/test/test_data.txt"
         cursor = db.cursor()
         db.text_factory = str
         data_file = open(input_csv,"r")
@@ -131,6 +131,7 @@ class RxCadre:
         hold_name = header[0]
 
         #cursor.execute("drop table "+hold_name)
+       
 
         sql = "CREATE TABLE "+hold_name+"("
         for i, h in enumerate(header):
@@ -154,6 +155,7 @@ class RxCadre:
             else:
                 cursor.execute(insrt, line.split(","))
             line = data_file.readline()
+
         cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",header[0:4])
         #The following is purely a sanity check
         #cursor.execute("SELECT * FROM obs_table")         
