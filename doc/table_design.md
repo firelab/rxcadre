@@ -63,10 +63,10 @@ _obs\_table\_name_ must be a name in the database.  _obs\_cols_ are the column
 names that hold observation data, comma separated.  _obs\_col\_names_ are
 human-readable strings for each column, comma separated.
 
-| obs\_table\_name | geometry\_column | obs\_cols                 | obs\_col\_names                  |
-| ---------------- | ---------------- | ------------------------- | -------------------------------- |
-| cup\_vane\_obs   | wkt_geometry     | 'dir,speed,gust'          | 'Direction,Speed(mph),Gust(mph)' |
-| fbp\_obs         | wkt_geometry     | 'tmp,ksh,ksv,mtr,mtt,nar' | 'Temperature(C),Horizontal Wind Speed(m/s),Vertical Wind Speed(m/s),Medtherm Radiant Flux(kw/m^2),Medtherm Total Heat Flux(kw/m^2),Narrow Angle Radiometer(kw/m^2)' |
+| obs\_table\_name | obs\_disp\_name | geometry\_column | obs\_cols                 | obs\_col\_names                  |
+| ---------------- | --------------- | ---------------- | ------------------------- | -------------------------------- |
+| cup\_vane\_obs   | 'Wind Data'     | wkt_geometry     | 'dir,speed,gust'          | 'Direction,Speed(mph),Gust(mph)' |
+| fbp\_obs         | 'Fire Behavior  | wkt_geometry     | 'tmp,ksh,ksv,mtr,mtt,nar' | 'Temperature(C),Horizontal Wind Speed(m/s),Vertical Wind Speed(m/s),Medtherm Radiant Flux(kw/m^2),Medtherm Total Heat Flux(kw/m^2),Narrow Angle Radiometer(kw/m^2)' |
 
 PRIMARY\_KEY(obs\_table\_name)
 
