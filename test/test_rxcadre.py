@@ -111,9 +111,18 @@ class RxCadreTestDb(unittest.TestCase):
         Test creating db and importing hobo data.
         '''
         db = self.rx.init_new_db("")
+        print 'one'
         self.assertNotEqual(db, None)
-        self.rx.import_rxc_wind_data(db,'test_data.txt')
+        print 'two'
+        self.rx.import_rxc_wind_data("kegan_test.csv",db)
+        print 'three'
         self.assertTrue(self.rx.check_valid_db(db))
+        print 'four'
+        kml = self.rx._point_kml("K1",'kegan_test',db)
+        print 'five'
+        kmz = self.rx.create_kmz("K1",'kegan_file','kegan_test',db)
+        print 'six'
+        
         
 
 

@@ -46,10 +46,79 @@ about what to display.
 import csv
 import os
 import sqlite3
+import time
+import datetime
 
+from collections import namedtuple
+import datetime
+import logging
+import math
+import sys
+import unittest
+import zipfile
+
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
+sys.path.append(os.path.abspath('windrose'))
+from windrose import *
 
 class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
+
+
+
+def _import_date(string):
+    '''
+    Parse a datetime from a UTC string
+    '''
+    dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
+    return dt
+
+def _export_date(dt):
+    '''
+    Parse date time and return a string for query
+    '''
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+def _extract_xy(wkt):
+    '''
+    Extract x and y coordinates from wkt in the db.  Strip 'POINT' from the
+    front, and split the remaining data losing the parentheses
+    '''
+    
+
+    wkt = wkt.strip().upper()
+    if wkt.find('POINT') < 0:
+        raise ValueError
+    wkt = wkt[wkt.find('(')+1:wkt.find(')')].split()
+    if len(wkt) != 2:
+        print len(wkt), wkt
+        raise ValueError
+    
+    wkt[0] = wkt[0].replace("\"","")
+    #wkt[0] = _to_decdeg(wkt[0])
+
+    wkt[1] = wkt[1].replace("\"","")
+    #wkt[1] = _to_decdeg(wkt[1])
+    
+    return tuple([float(c) for c in wkt])
+
+def _to_decdeg(d):
+    d = d.split("'")
+    s = float(d[-1])
+    s = s / 60.0
+    print d[0]
+    d, m = [float(f) for f in d[0].split('\xb0')]
+    m += s
+    m = m / 60.0
+    if d < 0:
+        m = m * -1
+    d += m
+    return d
+
 
 class RxCadre:
     """
@@ -62,6 +131,7 @@ class RxCadre:
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
         """
+        
         if os.path.exists(filename):
             raise RxCadreIOError("Database file already exists")
         db = sqlite3.connect(filename)
@@ -81,6 +151,12 @@ class RxCadre:
                                         obs_col_names TEXT)"""
         cursor.execute(sql)
         db.commit()
+        #self.db = sqlite3.connect(filename)
+        #self.cursor = self.db.cursor()
+        #Eventually change with a call to GUI
+        self.start = datetime.datetime.strptime("1/1/2001 01:01:01 AM", '%m/%d/%Y %I:%M:%S %p')
+        self.end = datetime.datetime.strptime("1/1/2020 01:01:01 AM", '%m/%d/%Y %I:%M:%S %p')
+
         valid = self.check_valid_db(db)
         if not valid:
             db.close()
@@ -110,16 +186,339 @@ class RxCadre:
         for name in obs_names:
             if name not in table_names:
                 e = "Database is invalid, missing table: "
+                print e
+                print name
+                print obs_names
+                print table_names
                 return False
         return True
 
+    #New Stuff Begin:
+    def point_location(self, plot, db):
+        '''
+        Fetch the x and y coordinate of the plot
+        '''
+        cursor = db.cursor()
+        sql = """SELECT geometry FROM plot_location WHERE plot_id=?"""
+        cursor.execute(sql, (plot,))
+        row = cursor.fetchone()
+        #print "ROW: "  , row
+        return _extract_xy(row[0])
 
-    def import_rxc_wind_data(self, db, input_csv):
+
+    def fetch_point_data(self, plot, table,start, end,db):
+        '''
+        Fetch data for a single point
+        '''
+        
+        cursor = db.cursor()
+        sql = """SELECT * FROM """+table+"""
+                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
+                           AND ?"""
+        #Note to self: removed quality tab from this.  may want to keep it
+        cursor.execute(sql, (plot,_export_date(start),_export_date(end)))
+        results = cursor.fetchall()
+        if (results != []):
+            data = [(t[0],t[1],t[2],t[3],t[4]) for t in results]
+        if (results == []):
+            e = 'Catastrophe'
+            raise RxCadreIOError(e)
+        
+        logging.info('Query fetched %i result(s)' % len(data))
+        return data
+
+    def statistics(self, data,db):
+        '''
+        Calculate the stats for speed and direction data
+        '''
+        """Made it so this function can pull data from db or file"""
+        if type(data) == str:
+            cursor = db.cursor()
+            
+            sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data
+            cursor.execute(sql)
+            data = cursor.fetchall()
+            
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+        if type(data) == list:
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+        samples = np.array(spd)
+        spd_mean = np.mean(samples)
+        spd_stddev = np.std(samples)
+        samples = np.array(gust)
+        gust_max = np.max(samples)
+        samples = np.array(dir)
+        direction_mean = stats.morestats.circmean(samples, 360, 0)
+        direction_stddev = stats.morestats.circstd(samples, 360, 0)
+        return (spd_mean, spd_stddev), (gust_max), (direction_mean, direction_stddev)
+
+    def _point_kml(self, plot, data, db, images=[]):
+        '''
+        Create a kml representation of a plot
+        '''
+        print images
+
+        lon, lat = self.point_location(plot,db)
+        stats = self.statistics(data,db)
+        if stats is None:
+            logging.warning('Could not calculate stats')
+            return ''
+        d = stats[2][0]
+        if d < 0:
+            d = d + 360.0
+
+        kml =               '  <Placemark>\n' \
+                            '    <Style>\n' \
+                            '      <IconStyle>\n' \
+                            '        <Icon>\n' \
+                            '          <href>http://maps.google.com/mapfiles/kml/shapes/arrow.png</href>\n' \
+                            '        </Icon>\n' \
+                            '        <heading>%s</heading>\n' \
+                            '      </IconStyle>\n' \
+                            '    </Style>\n' \
+                            '    <Point>\n' \
+                            '      <coordinates>%.9f,%.9f,0</coordinates>\n' \
+                            '    </Point>\n' % (d, lon, lat)
+        kml = kml +         '    <name>%s</name>\n' \
+                            '    <description>\n' \
+                            '      <![CDATA[\n' % plot
+        for image in images:
+            kml = kml +     '        <img src = "%s" />\n'  % image
+        kml = kml +         '        <table border="1">' \
+                            '          <tr>\n' \
+                            '            <th>Stats</th>\n' \
+                            '          </tr>\n' \
+                            '          <tr>\n' \
+                            '            <td>Average Speed</td>\n' \
+                            '            <td>%.2f</td>\n' \
+                            '          </tr>\n' \
+                            '          <tr>\n' \
+                            '            <td>STDDEV Speed</td>\n' \
+                            '            <td>%.2f</td>\n' \
+                            '          </tr>\n' \
+                            '          <tr>\n' \
+                            '            <td>Max Gust</td>\n' \
+                            '            <td>%.2f</td>\n' \
+                            '          </tr>\n' \
+                            '          <tr>\n' \
+                            '            <td>Average Direction</td>\n' \
+                            '            <td>%.2f</td>\n' \
+                            '          </tr>\n' \
+                            '          <tr>\n' \
+                            '            <td>STDDEV Direction</td>\n' \
+                            '            <td>%.2f</td>\n' \
+                            '          </tr>\n' \
+                            '        </table>\n'% (stats[0][0], stats[0][1],
+                                                   stats[1], stats[2][0], 
+                                                   stats[2][1])
+        kml = kml +         '      ]]>\n' \
+                            '    </description>\n' \
+                            '  </Placemark>\n'
+        return kml
+
+
+
+    def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
+        '''
+        Create a time series image for the plot over the time span
+        '''
+        if type(data) == list:
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
+        if type(data) == str:
+            cursor = db.cursor()
+            sql = """SELECT * FROM """+data+"""
+                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
+                           AND ?"""
+            #Note to self: removed quality tab from this.  may want to keep it
+            cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
+            data = cursor.fetchall()
+            print data
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
+       
+        
+        #fig = plt.figure(figsize=(8,8), dpi=80)
+        fig = plt.figure()
+        ax1 = fig.add_subplot(211)
+        ax1.plot_date(time, spd, 'b-')
+        #ax1.plot_date(time, gust, 'g-')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Speed(mph)', color = 'b')
+        ax2 = fig.add_subplot(212)
+        ax2.plot_date(time, dir, 'r.')
+        ax2.set_ylabel('Direction', color='r')
+        fig.autofmt_xdate()
+        plt.suptitle('Plot %s from %s to %s' % (plt_title, 
+                     start.strftime('%m/%d/%Y %I:%M:%S %p'),
+                     end.strftime('%m/%d/%Y %I:%M:%S %p')))
+        if not filename:
+            plt.show()
+            plt.close()
+        else:
+            plt.savefig(filename)
+            plt.close()
+        return filename
+
+    def create_windrose(self, data, filename,db):
+        '''
+        Create a windrose from a dataset.
+        '''
+        spd = [float(spd[2]) for spd in data]
+        gust = [float(gust[4]) for gust in data]
+        dir = [float(dir[3]) for dir in data]
+        
+        time = [mdates.date2num(datetime.datetime.strptime(d[1],
+                '%Y-%m-%d %H:%M:%S')) for d in data]
+
+        if len(data) >= 1:
+            #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
+            fig = plt.figure(facecolor='w', edgecolor='w')
+            rect = [0.1, 0.1, 0.8, 0.8]
+            ax = WindroseAxes(fig, rect, axisbg='w')
+            fig.add_axes(ax)
+            ax.bar(dir, spd, normed=True, opening=0.8, edgecolor='white')
+            #l = ax.legend(axespad=-0.10)
+            l = ax.legend(1.0)
+            plt.setp(l.get_texts(), fontsize=8)
+            if filename == '':
+                plt.show()
+                plt.close()
+            else:
+                plt.savefig(filename)
+                plt.close()
+            return filename
+        else:
+            if __debug__:
+                print 'Unknown failure in bigbutte.create_image()'
+            return None
+
+    def create_field_kmz(self, filename, table,start,end,db):
+        '''
+        Write a kmz with a time series and wind rose.  The stats are included
+        in the html bubble as well.
+        '''
+        cursor = db.cursor()
+        sql = '''SELECT DISTINCT(plot_id) FROM mean_flow_obs
+                   WHERE date_time BETWEEN ? AND ?'''
+        cursor.execute(sql, (start, end))
+
+        kmz = zipfile.ZipFile( filename, 'w', 0, True)
+        kmlfile = 'doc.kml'
+        fout = open(kmlfile, 'w')
+        fout.write('<Document>\n')
+
+        plots = cursor.fetchall()
+        for plot in plots:
+            plot = plot[0]
+            logging.info('Processing plot %s' % plot)
+            if filename == '':
+                filename = plot
+            if filename[-4:] != '.kmz':
+                filename = filename + '.kmz'
+            #need to specify table to fetch point from
+            data = self.fetch_point_data(plot,table,start,end,db)
+            if not data:
+                continue
+            try:
+                pngfile = self.create_time_series_image(data, plot, db, plot + '_time.png')
+                rosefile = self.create_windrose(data, plot + '_rose.png',db)
+                kml = self._point_kml(plot, data, db,[pngfile,rosefile])
+            except Exception as e:
+                logging.warning('Unknown exception has occurred')
+                if os.path.exists(pngfile):
+                    os.remove(pngfile)
+                if os.path.exists(rosefile):
+                    os.remove(rosefile)
+                continue
+
+            fout.write(kml)
+            fout.flush()
+
+            kmz.write(pngfile)
+            kmz.write(rosefile)
+            os.remove(pngfile)
+            os.remove(rosefile)
+        fout.write('</Document>\n')
+        fout.close()
+        kmz.write(kmlfile)
+        kmz.close()
+        os.remove(kmlfile)
+        return filename
+
+
+
+    
+
+    def create_kmz(self, plot, filename,table,start,end,db):
+        '''
+        Write a kmz with a time series and wind rose.  The stats are included
+        in the html bubble as well.
+        '''
+        if filename == '':
+            filename = plot
+        if filename[-4:] != '.kmz':
+            filename = filename + '.kmz'
+
+        data = self.fetch_point_data(plot,table,start,end,db)
+        pngfile = self.create_time_series_image(data, plot, start,end,db, plot + '_time.png')
+        rosefile = self.create_windrose(data, plot + '_rose.png',db)
+        kml = self._point_kml(plot, data, db,[pngfile,rosefile])
+
+        kmlfile = 'doc.kml'
+        fout = open(kmlfile, 'w')
+        fout.write(kml)
+        fout.close()
+
+        kmz = zipfile.ZipFile( filename, 'w', 0, True)
+        kmz.write(kmlfile)
+        kmz.write(pngfile)
+        kmz.write(rosefile)
+        kmz.close()
+        os.remove(kmlfile)
+        #os.remove(pngfile)
+        #os.remove(rosefile)
+        return filename
+    #New Stuff End
+
+    def create_csv(self, plot, filename,table,start,end,db):
+        if filename == '':
+            filename = plot
+        if filename[-4:] != '.csv':
+            filename = filename + '.csv'
+
+        data = self.fetch_point_data(plot,table,start,end,db)
+        file = open(filename,"w+")
+        file.write('PlotID,Date\\Time, Speed, Direction, Gust' + '\n')
+        for d in data:
+            d = str(d)
+            d = d.replace("u'","")
+            d = d.replace("'","")
+            d = d.replace("(","")
+            d = d.replace(")","")
+            
+            file.write(d+ "\n")
+        #file.write(data)
+        file.close()
+            
+
+
+    def import_rxc_wind_data(self, input_csv, db):
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
-        title = input_csv[0:input_csv.index(".")]
         cursor = db.cursor()
+
+        title = input_csv[0:input_csv.index(".")]
         db.text_factory = str
+        #Here's where I stopped
         data_file = open(input_csv,"r")
         header = data_file.readline().split(",")
         for i in range(0,len(header)):
@@ -128,7 +527,8 @@ class RxCadre:
             header[i] = header[i].replace(":","")
             header[i] = header[i].replace(")","")
             header[i] = header[i].replace("(","")
-        hold_name = header[0]
+        #hold_name = header[0]
+        hold_name = title
 
         #cursor.execute("drop table "+hold_name)
        
@@ -143,7 +543,7 @@ class RxCadre:
         #cursor.execute(sql)
 
         cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
-                                                     timestamp TEXT, speed TEXT,
+                                                     timestamp DATETIME, speed TEXT,
                                                      direction TEXT, gust TEXT)""")
 
         #qs = "("+ (len(header)-1)* "?," +"?)"
@@ -152,51 +552,56 @@ class RxCadre:
 
 
         for i in range(0,len(header)):
-            if "Time" in header[i]:
+            header[i] = header[i].lower()
+            if "time" in header[i]:
                     time = i
-            if "PlotID" in header[i]:
+            if "date" in header[i]:
+                    date = i
+            if ("plot" in header[i]) and ("id" in header[i]):
                     plotid = i
-            if "Speed" in header[i]:
+            if "speed" in header[i]:
                     speed = i
-            if "Direction" in header[i]:
+            if "direction" in header[i]:
                     direc = i
-            if "Gust" in header[i]:
+            if "gust" in header[i]:
                     gust = i
-            if "TagID" in header[i]:
+            if ("tag" in header[i]) and ("id" in header[i]):
                     tagid = i
-            if "Latitude" in header[i]:
+            if "latitude" in header[i]:
                     lat = i
-            if "Longitude" in header[i]:
+            if "longitude" in header[i]:
                     lon = i
-            if "InstrumentID" in header[i]:
+            if ("instrument" in header[i]) and ("id" in header[i]):
                     instrid = i
-        
+        print time, date, plotid, speed, direc, gust, tagid, lat, lon, instrid
 
         n = 0
         line = data_file.readline()
         line = line.split(",")
-        instr_id = instr_id2 = line[instrid]
+        instr_id = line[instrid]
+        instr_id2 = 0
         while (line != None):
             n = n+1
             if len(line) < len(header):
                 break
             else:
-                #cursor.execute(insrt, line.split(","))
-                new_data = line[plotid],line[time],line[speed],line[direc],line[gust]
+                new_data = line[plotid],_import_date(line[date]+" "+line[time]),line[speed],line[direc],line[gust]
                 cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
                 
             instr_id = line[instrid]
             if (instr_id != instr_id2):
-                plot_vals = line[plotid],"POINT("+line[lat]+" "+line[lon]+")",line[tagid]
+                plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
                 cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
+                
             
             instr_id2 = line[instrid]
             line = data_file.readline()
             line = line.split(",")
+            
 
-        obs_vals = hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
+        obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
         cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
-        
+       
         #The following is purely a sanity check
         #cursor.execute("SELECT * FROM plot_location")         
         #names = cursor.fetchall()
