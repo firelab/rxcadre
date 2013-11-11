@@ -28,14 +28,14 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText14.Wrap( -1 )
 		bSizer8.Add( self.m_staticText14, 0, wx.ALL, 5 )
 		
-		self.cur_dir = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_READONLY )
+		self.cur_dir = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (300,-1), wx.TE_READONLY )
 		bSizer8.Add( self.cur_dir, 0, wx.ALL, 5 )
 		
 		self.m_staticText11 = wx.StaticText( self, wx.ID_ANY, u"Current Database:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText11.Wrap( -1 )
 		bSizer8.Add( self.m_staticText11, 0, wx.ALL, 5 )
 		
-		self.db_picker = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_READONLY )
+		self.db_picker = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (300,-1), wx.TE_READONLY )
 		bSizer8.Add( self.db_picker, 0, wx.ALL, 5 )
 		
 		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"Select Table:", wx.DefaultPosition, wx.DefaultSize, 0 )

@@ -106,28 +106,31 @@ class MakeFrame(test_gui.GUI_test1):
         if name[-3:] != '.db':
             name = name + '.db'
         db = sqlite3.connect(name)
-      
+        if self.check_valid_db(db) == False:
+            self.RxCadreIOError('The selected database appears to be of an incorrect format.  Please select a different database.')
+            db.commit()
+            db.close()
+            os.remove(name)
+
+        else:
+            table = self.combo.GetLabel()
+            cursor = db.cursor()
+            sql  = "SELECT name FROM sqlite_master WHERE type = 'table'"
+            cursor.execute(sql)
+            tables = cursor.fetchall()
+            tables = [t[0] for t in tables]
+            for i in range(0,len(tables)):
+                tables[i] = str(tables[i])
+
+
+            self.combo.Clear()
+            for t in tables:
+                if "plot_location" not in t and "event" not in t and "obs_table" not in t:
+                    self.combo.Append(t)
+            self.update_events()
+            db.commit()
+            db.close()
         
-
-        table = self.combo.GetLabel()
-        cursor = db.cursor()
-        sql  = "SELECT name FROM sqlite_master WHERE type = 'table'"
-        cursor.execute(sql)
-        tables = cursor.fetchall()
-        tables = [t[0] for t in tables]
-        for i in range(0,len(tables)):
-            tables[i] = str(tables[i])
-
-
-        self.combo.Clear()
-        for t in tables:
-            if "plot_location" not in t and "event" not in t and "obs_table" not in t:
-                self.combo.Append(t)
-
-        self.update_events()
-
-        db.commit()
-        db.close()
 
     def change_picker(self,event):
         """
@@ -188,6 +191,8 @@ class MakeFrame(test_gui.GUI_test1):
             if name not in table_names:
                 e = "Database is invalid, missing table: "
                 self.RxCadreIOError(e)
+                db.commit()
+                db.close()
 
                 return False
         return True
@@ -200,8 +205,8 @@ class MakeFrame(test_gui.GUI_test1):
         """
         if filename[-3:] != '.db':
             filename = filename + '.db'
-        if filepath[-1] != '/':
-            filepath = filepath + '/'
+        if filepath[-1] != '\\':
+            filepath = filepath + '\\'
         if file_acc(filepath+filename,"r") == True:
             self.RxCadreIOError("Database file already exists")
         else:
@@ -267,7 +272,7 @@ class MakeFrame(test_gui.GUI_test1):
         events = [c[0] for c in cursor.fetchall()]
         self.event_combo.Clear()
         for e in events:
-            self.event_combo.Append(e)
+             self.event_combo.Append(e)
         db.commit()
         db.close()
 
@@ -279,9 +284,11 @@ class MakeFrame(test_gui.GUI_test1):
         Import the appropriate columns and populate with associated data."""
         if (self.db_picker.GetLabel() != ""):
             name = self.db_picker.GetLabel()
+            if name[-3:] != '.db':
+                name = name + '.db'
             db = sqlite3.connect(name)
-        if (self.db_picker.GetLabel() == ""):
-            self.RxCadreIOError("please select a database")
+        if (self.db_picker.GetLabel() == "" or self.check_valid_db(db) == False):
+            self.RxCadreIOError("Please select a valid database")
         else:
             self.combo.Clear()
             cursor = db.cursor()
@@ -303,6 +310,8 @@ class MakeFrame(test_gui.GUI_test1):
             cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
                                                          timestamp DATETIME, speed TEXT,
                                                          direction TEXT, gust TEXT)""")
+
+            time = date = plot = speed = direction = gust = -1
 
 
 
@@ -328,67 +337,70 @@ class MakeFrame(test_gui.GUI_test1):
                         lon = i
                 if ("instrument" in header[i]) and ("id" in header[i]):
                         instrid = i
-
-
-            n = 0
-            line = data_file.readline()
-            line = line.split(",")
-            begin = line[time]
-            end = line[time]
-            plot_id = [line[plotid]]
-            instr_id = line[instrid]
-            instr_id2 = 0
-            while (line != None):
-                n = n+1
-                if len(line) < len(header):
-                    break
-                else:
-                    new_data = line[plotid],_import_date(line[date]+" "+line[time]),line[speed],line[direc],line[gust]
-                    cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
-                    if line[time] < begin:
-                        begin = line[time]
-                    if line[time] > end:
-                        end = line[time]
-                    if line[plotid] not in plot_id:
-                        plot_id.append(line[plotid])
-      
-                instr_id = line[instrid]
-                if (instr_id != instr_id2):
-                    plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
-                    cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
-                
-                instr_id2 = line[instrid]
+            if time == -1 or date == -1 or plot == -1 or speed == -1 or direction == -1 or gust == -1:
+                self.RxCadreIOError('The selected data does not include the necessary fields for analysis')
+            else:
+                n = 0
                 line = data_file.readline()
                 line = line.split(",")
+                begin = line[time]
+                end = line[time]
+                plot_id = [line[plotid]]
+                instr_id = line[instrid]
+                instr_id2 = 0
+                while (line != None):
+                    n = n+1
+                    if len(line) < len(header):
+                        break
+                    else:
+                        new_data = line[plotid],_import_date(line[date]+" "+line[time]),line[speed],line[direc],line[gust]
+                        cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
+                        if line[time] < begin:
+                            begin = line[time]
+                        if line[time] > end:
+                            end = line[time]
+                        if line[plotid] not in plot_id:
+                            plot_id.append(line[plotid])
+          
+                    instr_id = line[instrid]
+                    if (instr_id != instr_id2):
+                        plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
+                        cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
+                    
+                    instr_id2 = line[instrid]
+                    line = data_file.readline()
+                    line = line.split(",")
 
-            sql = "SELECT plot_id FROM plot_location"
-            cursor.execute(sql)
-            plots = cursor.fetchall()
-            plots_hold = []
+                sql = "SELECT plot_id FROM plot_location"
+                cursor.execute(sql)
+                plots = cursor.fetchall()
+                plots_hold = []
 
-            self.m_choice17.Clear()
-            for p in plot_id:
-                p = str(p)
-                self.m_choice17.Append(p)
+                self.m_choice17.Clear()
+                for p in plot_id:
+                    p = str(p)
+                    self.m_choice17.Append(p)
 
-            sql = "SELECT name FROM sqlite_master WHERE type='table'"
-            cursor.execute(sql)
-            table_names = cursor.fetchall()
-            self.combo.Clear()
-            table_names = [t[0] for t in table_names]
-            for i in range(0,len(table_names)):
-                table_names[i] = str(table_names[i])
-                if "plot_location" not in table_names[i] and "event" not in table_names[i] and "obs_table" not in table_names[i]:
-                    self.combo.Append(table_names[i])
+                sql = "SELECT name FROM sqlite_master WHERE type='table'"
+                cursor.execute(sql)
+                table_names = cursor.fetchall()
+                self.combo.Clear()
+                table_names = [t[0] for t in table_names]
+                for i in range(0,len(table_names)):
+                    table_names[i] = str(table_names[i])
+                    if "plot_location" not in table_names[i] and "event" not in table_names[i] and "obs_table" not in table_names[i]:
+                        self.combo.Append(table_names[i])
 
 
-            obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
-            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
+                obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
+                cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
 
-           
-            db.commit()
-            db.close()
-            print "Data imported successfully"
+                dialog = wx.MessageDialog(None,input_csv[(input_csv.rfind("\\")+1):] + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
+                dialog.ShowModal()
+               
+                db.commit()
+                db.close()
+                print "Data imported successfully"
 
     def create_all(self,event):
         if (self.db_picker.GetLabel() == ""):
@@ -484,9 +496,11 @@ class MakeFrame(test_gui.GUI_test1):
             dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
             if dialog.ShowModal() == wx.ID_OK:
                 name = dialog.GetPath()
-                name = name[(name.rfind("\\")+1):name.index(".")]
+                name = name[(name.rfind("/")+1):name.index(".")]
+                if name[-3:] != '.db':
+                    name = name + '.db'
                 self.db_picker.SetLabel(name)
-            dialog.Destroy()
+                dialog.Destroy()
 
     def create_db(self,event):
         file_path = self.cur_dir.GetLabel()
