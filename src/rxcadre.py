@@ -61,6 +61,7 @@ import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import wx
 
 sys.path.append(os.path.abspath('windrose'))
 from windrose import *
@@ -69,6 +70,14 @@ class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
 
 
+def file_acc(filepath, mode):
+    ''' Check if a file exists and is accessible. '''
+    try:
+        f = open(filepath, mode)
+    except IOError as e:
+        return False
+ 
+    return True
 
 def _import_date(string):
     '''
@@ -97,7 +106,7 @@ def _extract_xy(wkt):
     if len(wkt) != 2:
         print len(wkt), wkt
         raise ValueError
-    
+    print wkt
     wkt[0] = wkt[0].replace("\"","")
     #wkt[0] = _to_decdeg(wkt[0])
 
@@ -110,7 +119,7 @@ def _to_decdeg(d):
     d = d.split("'")
     s = float(d[-1])
     s = s / 60.0
-    print d[0]
+    
     d, m = [float(f) for f in d[0].split('\xb0')]
     m += s
     m = m / 60.0
@@ -124,45 +133,147 @@ class RxCadre:
     """
     Main interface for RX Cadre data.
     """
+    def get_time(self,event):
+        begin = self.start_month.GetLabel()+"/"+self.start_day.GetLabel()+"/"+self.start_year.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
+        stop = self.end_month.GetLabel()+"/"+self.end_day.GetLabel()+"/"+self.end_year.GetLabel()+" "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
+        begin = str(begin)
+        stop = str(stop)
+        return begin, stop
+    
+    def event_time(self,name):
+        if name[-3:] != '.db':
+            name = name + '.db'
+        db = sqlite3.connect(name)    
+        cursor = db.cursor()
+        sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"
+        cursor.execute(sql)
+        time = cursor.fetchall()
+        time = time[0]
+        begin = str(time[0])
+        stop = str(time[1])
+        return begin, stop
 
-    def init_new_db(self, filename):
+    def create_title(self, begin, stop):
+        new_label = self.m_choice17.GetLabel()+"_"+begin+"_"+stop
+        new_label = new_label.replace(" ","_")
+        new_label = new_label.replace("/","-")
+        new_label = new_label.replace(":",".")
+        self.file_name.SetLabel(new_label)
+        return new_label
+
+    def get_project(self,event):
+        if self.proj_combo.GetLabel() == "":
+            project = "RxCadre"
+        else:
+            project = self.proj_combo.GetLabel()
+        return project
+
+    def display_rose(self, plot, png):
+        self.bmp = wx.Image(plot+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
+        self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
+        self.plot_time.Refresh()
+        os.remove(plot +'_time.png')
+
+    def display_time(self, plot, png):
+        self.bmp2 = wx.Image(plot+'_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
+        self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
+        self.plot_rose.Refresh()
+        os.remove(plot +'_rose.png')
+        
+
+    def change_tables(self,name):
+        """"
+        I change the values of the table to only those that are present in the
+        selected database.
+        """
+        
+        
+        if name[-3:] != '.db':
+            name = name + '.db'
+        db = sqlite3.connect(name)
+        if self.check_valid_db(db) == False:
+            e ='The selected database appears to be of an incorrect format.  Please select a different database.'
+            db.commit()
+            db.close()
+            os.remove(name)
+
+        else:
+            cursor = db.cursor()
+            sql  = "SELECT name FROM sqlite_master WHERE type = 'table'"
+            cursor.execute(sql)
+            tables = cursor.fetchall()
+            tables = [t[0] for t in tables]
+            
+        return tables
+
+    def change_picker(self,name, table):
+        """
+        I change the values in the plot_id_picker to only those that are
+        actually in the selected table, be it from imported data or stored
+        in the database.
+        """
+        
+        if name[-3:] != '.db':
+            name = name + '.db'
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        sql  = "SELECT plot_id_table FROM "+table
+        cursor.execute(sql)
+        plots = cursor.fetchall()
+        plots_new = []
+        plots = [p[0] for p in plots]
+        for i in range(0,len(plots)):
+            plots[i] = str(plots[i])
+            if plots[i] not in plots_new:
+                plots_new.append(plots[i])
+        return plots_new
+
+        
+
+        
+
+    def init_new_db(self, filename,filepath):
         """
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
         """
-        
-        if os.path.exists(filename):
-            raise RxCadreIOError("Database file already exists")
-        db = sqlite3.connect(filename)
-        cursor = db.cursor()
-        sql = """CREATE TABLE plot_location(plot_id TEXT, 
-                                            geometry TEXT, plot_type TEXT)"""
-        cursor.execute(sql)
-        sql = """CREATE TABLE event(project_name TEXT,
-                                    event_name TEXT NOT NULL,
-                                    event_start TEXT NOT NULL,
-                                    event_end TEXT NOT NULL,
-                                    PRIMARY KEY(project_name, event_name))"""
-        cursor.execute(sql)
-        sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
-                                        geometry_column TEXT NOT NULL,
-                                        obs_cols TEXT NOT NULL,
-                                        obs_col_names TEXT)"""
-        cursor.execute(sql)
-        db.commit()
-        #self.db = sqlite3.connect(filename)
-        #self.cursor = self.db.cursor()
-        #Eventually change with a call to GUI
-        self.start = datetime.datetime.strptime("1/1/2001 01:01:01 AM", '%m/%d/%Y %I:%M:%S %p')
-        self.end = datetime.datetime.strptime("1/1/2020 01:01:01 AM", '%m/%d/%Y %I:%M:%S %p')
-
-        valid = self.check_valid_db(db)
-        if not valid:
-            db.close()
-            e = "Failed to create a valid database."
-            raise RxCadreInvalidDbError(e)
-        return db
+        if filename[-3:] != '.db':
+            filename = filename + '.db'
+        if filepath[-1] != '\\':
+            filepath = filepath + '\\'
+        if file_acc(filepath+filename,"r") == True:
+            e = "Database file already exists"
+        else:
+            filename = filepath  + filename
+            db = sqlite3.connect(filename)
+            cursor = db.cursor()
+            sql = """CREATE TABLE plot_location(plot_id TEXT, 
+                                                geometry TEXT, plot_type TEXT)"""
+            cursor.execute(sql)
+            sql = """CREATE TABLE event(project_name TEXT,
+                                        event_name TEXT NOT NULL,
+                                        event_start TEXT NOT NULL,
+                                        event_end TEXT NOT NULL,
+                                        PRIMARY KEY(project_name, event_name))"""
+            cursor.execute(sql)
+            sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+                                            geometry_column TEXT NOT NULL,
+                                            obs_cols TEXT NOT NULL,
+                                            obs_col_names TEXT)"""
+            cursor.execute(sql)
+            db.commit()
+            #update tables, update events, set db_picker to filename
+            valid = self.check_valid_db(db)
+            if not valid:
+                db.close()
+                e = "Failed to create a valid database."
+                self.RxCadreIOError(e)
+            else:
+                print "db created"
+                return db
 
 
     def check_valid_db(self, db):
@@ -186,14 +297,48 @@ class RxCadre:
         for name in obs_names:
             if name not in table_names:
                 e = "Database is invalid, missing table: "
-                print e
-                print name
-                print obs_names
-                print table_names
                 return False
         return True
 
-    #New Stuff Begin:
+    def update_events(self, name):
+
+        if name[-3:] != '.db':
+            name = name+'.db'
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        
+        sql = "SELECT event_name FROM event"
+        cursor.execute(sql)
+        events = [c[0] for c in cursor.fetchall()]
+
+        sql = "SELECT project_name FROM event"
+        cursor.execute(sql)
+        projects = [c[0] for c in cursor.fetchall()]
+        return events, projects
+
+
+    def update_tables(self):
+
+        name = self.db_picker.GetLabel()
+        if name[-3:] != '.db':
+            name = name+'.db'
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        sql = "SELECT name FROM sqlite_master WHERE type='table'"
+        cursor.execute(sql)
+        table_names = cursor.fetchall()
+        self.combo.Clear()
+        table_names = [t[0] for t in table_names]
+        for i in range(0,len(table_names)):
+            table_names[i] = str(table_names[i])
+            if "plot_location" not in table_names[i] and "event" not in table_names[i] and "obs_table" not in table_names[i]:
+                self.combo.Append(table_names[i])
+
+
+
+
+
+
     def point_location(self, plot, db):
         '''
         Fetch the x and y coordinate of the plot
@@ -511,14 +656,18 @@ class RxCadre:
             
 
 
-    def import_rxc_wind_data(self, input_csv, db):
+    def import_data(self,input_csv,db):
+        
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
+        name = db
+        if name[-3:] != '.db':
+            name = name + '.db'
+        db = sqlite3.connect(name)
         cursor = db.cursor()
-
-        title = input_csv[0:input_csv.index(".")]
+        title = os.path.basename(input_csv)
+        title = title[:title.index(".")]
         db.text_factory = str
-        #Here's where I stopped
         data_file = open(input_csv,"r")
         header = data_file.readline().split(",")
         for i in range(0,len(header)):
@@ -527,30 +676,10 @@ class RxCadre:
             header[i] = header[i].replace(":","")
             header[i] = header[i].replace(")","")
             header[i] = header[i].replace("(","")
-        #hold_name = header[0]
+
         hold_name = title
 
-        #cursor.execute("drop table "+hold_name)
-       
-
-        #sql = "CREATE TABLE "+hold_name+"("
-        #for i, h in enumerate(header):
-        #    sql += h + ' text'
-        #    if(i < len(header)-1):
-        #        sql += ','
-        #sql += ')'
-
-        #cursor.execute(sql)
-
-        cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
-                                                     timestamp DATETIME, speed TEXT,
-                                                     direction TEXT, gust TEXT)""")
-
-        #qs = "("+ (len(header)-1)* "?," +"?)"
-        #insrt = "insert into " + hold_name+ " values "
-        #insrt += qs
-
-
+        time = date = plotid = speed = direc = gust = -1
         for i in range(0,len(header)):
             header[i] = header[i].lower()
             if "time" in header[i]:
@@ -573,39 +702,79 @@ class RxCadre:
                     lon = i
             if ("instrument" in header[i]) and ("id" in header[i]):
                     instrid = i
-        print time, date, plotid, speed, direc, gust, tagid, lat, lon, instrid
+        if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
+            self.RxCadreIOError("""
+The selected data does not include the necessary fields for analysis. 
+Please make sure that the selected data includes a separate
+time, date, plotID, wind speed, wind direction and wind gust column
+                                """)
 
-        n = 0
-        line = data_file.readline()
-        line = line.split(",")
-        instr_id = line[instrid]
-        instr_id2 = 0
-        while (line != None):
-            n = n+1
-            if len(line) < len(header):
-                break
-            else:
-                new_data = line[plotid],_import_date(line[date]+" "+line[time]),line[speed],line[direc],line[gust]
-                cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
-                
-            instr_id = line[instrid]
-            if (instr_id != instr_id2):
-                plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
-                cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
-                
-            
-            instr_id2 = line[instrid]
+        else:
+
+            cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
+                                                        timestamp DATETIME, speed TEXT,
+                                                        direction TEXT, gust TEXT)""")
+
+            n = 0
             line = data_file.readline()
             line = line.split(",")
-            
+            begin = line[time]
+            end = line[time]
+            plot_id = [line[plotid]]
+            instr_id = line[instrid]
+            instr_id2 = 0
+            while (line != None):
+                n = n+1
+                if len(line) < len(header):
+                    break
+                else:
+                    new_data = line[plotid],_import_date(line[date]+" "+line[time]),line[speed],line[direc],line[gust]
+                    cursor.execute("INSERT INTO "+hold_name+" VALUES (?,?,?,?,?)", new_data)
+                    if line[time] < begin:
+                        begin = line[time]
+                    if line[time] > end:
+                        end = line[time]
+                    if line[plotid] not in plot_id:
+                        plot_id.append(line[plotid])
+          
+                instr_id = line[instrid]
+                if (instr_id != instr_id2):
+                    plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
+                    cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
+                    
+                instr_id2 = line[instrid]
+                line = data_file.readline()
+                line = line.split(",")
 
-        obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
-        cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
+            sql = "SELECT plot_id FROM plot_location"
+            cursor.execute(sql)
+            plots = cursor.fetchall()
+            plots_hold = []
+
+            #update plotIDs
+
+            #update tables
+
+
+            obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
+            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
+
+            #msg_import
+               
+            db.commit()
+            db.close()
+            p = "Data imported successfully"
+
+
+
+        
+
+    
+
+    
+
+    
        
-        #The following is purely a sanity check
-        #cursor.execute("SELECT * FROM plot_location")         
-        #names = cursor.fetchall()
-        #print names, len(names)
 
     
 

@@ -16,7 +16,7 @@ import wx
 class GUI_test1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre", pos = wx.DefaultPosition, size = wx.Size( 1378,856 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre_testGUI", pos = wx.DefaultPosition, size = wx.Size( 1378,856 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		self.SetBackgroundColour('WHITE')
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
@@ -37,6 +37,14 @@ class GUI_test1 ( wx.Frame ):
 		
 		self.db_picker = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, (300,-1), wx.TE_READONLY )
 		bSizer8.Add( self.db_picker, 0, wx.ALL, 5 )
+		
+		self.m_staticText111 = wx.StaticText( self, wx.ID_ANY, u"Current Project:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText111.Wrap( -1 )
+		bSizer8.Add( self.m_staticText111, 0, wx.ALL, 5 )
+		
+		proj_comboChoices = []
+		self.proj_combo = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, proj_comboChoices, 0 )
+		bSizer8.Add( self.proj_combo, 0, wx.ALL, 5 )
 		
 		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"Select Table:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText9.Wrap( -1 )
