@@ -306,15 +306,7 @@ class MakeFrame(test_gui.GUI_test1):
 
             hold_name = title
 
-
-            cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
-                                                         timestamp DATETIME, speed TEXT,
-                                                         direction TEXT, gust TEXT)""")
-
-            time = date = plot = speed = direction = gust = -1
-
-
-
+            time = date = plotid = speed = direc = gust = -1
             for i in range(0,len(header)):
                 header[i] = header[i].lower()
                 if "time" in header[i]:
@@ -337,9 +329,19 @@ class MakeFrame(test_gui.GUI_test1):
                         lon = i
                 if ("instrument" in header[i]) and ("id" in header[i]):
                         instrid = i
-            if time == -1 or date == -1 or plot == -1 or speed == -1 or direction == -1 or gust == -1:
-                self.RxCadreIOError('The selected data does not include the necessary fields for analysis')
+            if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
+                self.RxCadreIOError("""
+The selected data does not include the necessary fields for analysis. 
+Please make sure that the selected data includes a separate
+time, date, plotID, wind speed, wind direction and wind gust column
+                                    """)
+
             else:
+
+                cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
+                                                         timestamp DATETIME, speed TEXT,
+                                                         direction TEXT, gust TEXT)""")
+
                 n = 0
                 line = data_file.readline()
                 line = line.split(",")
@@ -496,7 +498,7 @@ class MakeFrame(test_gui.GUI_test1):
             dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
             if dialog.ShowModal() == wx.ID_OK:
                 name = dialog.GetPath()
-                name = name[(name.rfind("/")+1):name.index(".")]
+                name = os.path(name)
                 if name[-3:] != '.db':
                     name = name + '.db'
                 self.db_picker.SetLabel(name)
