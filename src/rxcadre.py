@@ -359,7 +359,7 @@ class RxCadre:
         if (results != []):
             data = [(t[0],t[1],t[2],t[3],t[4]) for t in results]
         if (results == []):
-            e = 'Catastrophe'
+            e = 'The timeframe selected contains no data for this table.'
             raise RxCadreIOError(e)
         
         logging.info('Query fetched %i result(s)' % len(data))

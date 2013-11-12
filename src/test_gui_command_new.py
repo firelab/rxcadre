@@ -153,8 +153,8 @@ class MakeFrame(test_gui.GUI_test1):
                 
                 
                 if (self.event_combo.GetLabel() == ""):
-                    begin = self.start_month.GetLabel()+"/"+self.start_day.GetLabel()+"/"+self.start_year.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
-                    stop = self.end_month.GetLabel()+"/"+self.end_day.GetLabel()+"/"+self.end_year.GetLabel()+" "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
+                    begin = self.start_date.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
+                    stop = self.stop_date.GetLabel() + " "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
                 if (self.event_combo.GetLabel() != ""):
                     name = self.event_combo.GetLabel()
                     sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"

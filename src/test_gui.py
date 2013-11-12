@@ -58,7 +58,7 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText10.Wrap( -1 )
 		bSizer8.Add( self.m_staticText10, 0, wx.ALL, 5 )
 		
-		m_choice17Choices = [u'   ']
+		m_choice17Choices = [ u"L1G", u"S8", u"K1" ]
 		self.m_choice17 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice17Choices, 0 )
 		self.m_choice17.SetSelection( 0 )
 		bSizer8.Add( self.m_choice17, 0, wx.ALL, 5 )
@@ -71,20 +71,8 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText3.Wrap( -1 )
 		bSizer9.Add( self.m_staticText3, 0, wx.ALL, 5 )
 		
-		start_monthChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
-		self.start_month = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_monthChoices, 0 )
-		self.start_month.SetSelection( 0 )
-		bSizer9.Add( self.start_month, 0, wx.ALL, 5 )
-		
-		start_dayChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31" ]
-		self.start_day = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_dayChoices, 0 )
-		self.start_day.SetSelection( 0 )
-		bSizer9.Add( self.start_day, 0, wx.ALL, 5 )
-		
-		start_yearChoices = [ u"1990", u"1991", u"1992", u"1993", u"1994", u"1995", u"1996", u"1997", u"1998", u"1999", u"2000", u"2001", u"2002", u"2003", u"2004", u"2005", u"2006", u"2007", u"2008", u"2009", u"2010", u"2011", u"2012", u"2013", u"2014", u"2015", u"2016", u"2017", u"2018", u"2019", u"2020" ]
-		self.start_year = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_yearChoices, 0 )
-		self.start_year.SetSelection( 0 )
-		bSizer9.Add( self.start_year, 0, wx.ALL, 5 )
+		self.start_date = wx.DatePickerCtrl( self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize, wx.DP_DEFAULT )
+		bSizer9.Add( self.start_date, 0, wx.ALL, 5 )
 		
 		self.m_staticText7 = wx.StaticText( self, wx.ID_ANY, u"Select Start Time:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText7.Wrap( -1 )
@@ -126,20 +114,8 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText4.Wrap( -1 )
 		bSizer10.Add( self.m_staticText4, 0, wx.ALL, 5 )
 		
-		end_monthChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
-		self.end_month = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_monthChoices, 0 )
-		self.end_month.SetSelection( 0 )
-		bSizer10.Add( self.end_month, 0, wx.ALL, 5 )
-		
-		end_dayChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31" ]
-		self.end_day = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_dayChoices, 0 )
-		self.end_day.SetSelection( 0 )
-		bSizer10.Add( self.end_day, 0, wx.ALL, 5 )
-		
-		end_yearChoices = [ u"1990", u"1991", u"1992", u"1993", u"1994", u"1995", u"1996", u"1997", u"1998", u"1999", u"2000", u"2001", u"2002", u"2003", u"2004", u"2005", u"2006", u"2007", u"2008", u"2009", u"2010", u"2011", u"2012", u"2013", u"2014", u"2015", u"2016", u"2017", u"2018", u"2019", u"2020" ]
-		self.end_year = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_yearChoices, 0 )
-		self.end_year.SetSelection( 0 )
-		bSizer10.Add( self.end_year, 0, wx.ALL, 5 )
+		self.stop_date = wx.DatePickerCtrl( self, wx.ID_ANY, wx.DefaultDateTime, wx.DefaultPosition, wx.DefaultSize, wx.DP_DEFAULT )
+		bSizer10.Add( self.stop_date, 0, wx.ALL, 5 )
 		
 		self.m_staticText8 = wx.StaticText( self, wx.ID_ANY, u"  Select End Time:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText8.Wrap( -1 )
@@ -164,9 +140,6 @@ class GUI_test1 ( wx.Frame ):
 		self.end_ampm = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_ampmChoices, 0 )
 		self.end_ampm.SetSelection( 0 )
 		bSizer10.Add( self.end_ampm, 0, wx.ALL, 5 )
-		
-		
-		bSizer10.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
 		bSizer6.Add( bSizer10, 0, wx.EXPAND, 5 )
 		
@@ -244,8 +217,6 @@ class GUI_test1 ( wx.Frame ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
-	
-	
 	def change_picker( self, event ):
 		event.Skip()
 	
