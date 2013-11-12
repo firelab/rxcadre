@@ -83,6 +83,10 @@ def file_acc(filepath, mode):
     return True
 #>>>>>>> First migration attempt
 
+
+
+    
+
 def _import_date(string):
     """
     Parse a datetime from a UTC string
@@ -145,6 +149,28 @@ class RxCadre:
     """
     Main interface for RX Cadre data.
     """
+    def check_valid_file(self,filepath):
+        f= open(filepath,'r')
+        header = f.readline().split(",")
+        time = date = plotid = speed = direc = gust = -1
+        for i in range(0,len(header)):
+            header[i] = header[i].lower()
+            if "time" in header[i]:
+                    time = i
+            if "date" in header[i]:
+                    date = i
+            if "plot" in header[i]:
+                    plotid = i
+            if "speed" in header[i]:
+                    speed = i
+            if "direction" in header[i]:
+                    direc = i
+            if "gust" in header[i]:
+                    gust = i
+        if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
+            return False
+        return True
+
     def get_time(self,event):
         begin = self.start_month.GetLabel()+"/"+self.start_day.GetLabel()+"/"+self.start_year.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
         stop = self.end_month.GetLabel()+"/"+self.end_day.GetLabel()+"/"+self.end_year.GetLabel()+" "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
@@ -691,11 +717,11 @@ class RxCadre:
             if ("instrument" in header[i]) and ("id" in header[i]):
                     instrid = i
         if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
-            self.RxCadreIOError("""
+            e = """
 The selected data does not include the necessary fields for analysis. 
 Please make sure that the selected data includes a separate
 time, date, plotID, wind speed, wind direction and wind gust column
-                                """)
+                                """
 
         else:
 

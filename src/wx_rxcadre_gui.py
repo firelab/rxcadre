@@ -1,17 +1,6 @@
-# -*- coding: utf-8 -*- 
-
-###########################################################################
-## Python code generated with wxFormBuilder (version Sep  8 2010)
-## http://www.wxformbuilder.org/
-##
-## PLEASE DO "NOT" EDIT THIS FILE!
-###########################################################################
-
 import wx
 
-###########################################################################
-## Class GUI_test1
-###########################################################################
+#This file defines the interface structure
 
 class GUI_test1 ( wx.Frame ):
 	
@@ -58,7 +47,7 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText10.Wrap( -1 )
 		bSizer8.Add( self.m_staticText10, 0, wx.ALL, 5 )
 		
-		m_choice17Choices = [ u"L1G", u"S8", u"K1" ]
+		m_choice17Choices = [ u"   " ]
 		self.m_choice17 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice17Choices, 0 )
 		self.m_choice17.SetSelection( 0 )
 		bSizer8.Add( self.m_choice17, 0, wx.ALL, 5 )
