@@ -79,20 +79,18 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
                 dialog.Destroy()
 
     def create_db(self,event):
-        file_path = os.path.abspath("")
         dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database")
         if dialog.ShowModal() == wx.ID_OK:
             name = dialog.GetValue()
         dialog.Destroy()
-        RxCadre().init_new_db(os.path.join(file_path, name))
+        RxCadre().init_new_db(os.path.abspath(name))
         self.db_picker.SetLabel(name)
         self.change_tables()
 
 
     def change_picker(self, event):
         name = self.db_picker.GetLabel()
-        file_path = os.path.abspath("")
-        name = os.path.join(file_path, name)
+        name = os.path.abspath(name)
         table = self.combo.GetLabel()
         plots_new = RxCadre().change_picker(name, table)
         self.m_choice17.Clear()
@@ -123,7 +121,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 if filename_hold in tables:
                     self.RxCadreIOError('This data has already been imported.')
                 else:
-                    RxCadre().import_data(filename, os.path.join(file_path,name))
+                    RxCadre().import_data(filename, os.path.abspath(name))
                     self.change_tables()
                     dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
                     dialog.ShowModal()
@@ -132,8 +130,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
         if (self.db_picker.GetLabel() == ""):
             self.RxCadreIOError('Please Select a Database')
         name = self.db_picker.GetLabel()
-        file_path = os.path.abspath("")
-        name = os.path.join(file_path, name)
+        name = os.path.abspath(name)
         req_ext = '.db'
         if os.path.splitext(name)[-1] != req_ext:
             name = name + req_ext
@@ -183,8 +180,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.RxCadreIOError('Please select two different times')
                 else:
                     
-                    kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(file_path,self.file_name.GetLabel()),title,self.start,self.end,db)
-                    RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(file_path,self.file_name.GetLabel()),title,self.start,self.end,db)
+                    kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.abspath(self.file_name.GetLabel()),title,self.start,self.end,db)
+                    RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.abspath(self.file_name.GetLabel()),title,self.start,self.end,db)
 
                     self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                     self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
