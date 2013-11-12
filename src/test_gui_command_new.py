@@ -47,8 +47,10 @@ class MakeFrame(test_gui.GUI_test1):
         dialog.Destroy()
         self.cur_dir.SetLabel(dir)
 
-    def change_tables(self, event):
+    def change_tables(self):
         name = self.db_picker.GetLabel()
+        file_path = self.cur_dir.GetLabel()
+        name = file_path + "/" + name
         tables = RxCadre().change_tables(name)
         self.combo.Clear()
         for i in range(0,len(tables)):
@@ -78,7 +80,10 @@ class MakeFrame(test_gui.GUI_test1):
                 name = dialog.GetPath()
                 if name[-3:] != '.db':
                     name = name + '.db'
+                index = max(name.rfind("/"),name.rfind("\\"))
+                name = name[index+1:]
                 self.db_picker.SetLabel(name)
+                self.change_tables()
                 dialog.Destroy()
 
     def create_db(self,event):
@@ -91,10 +96,16 @@ class MakeFrame(test_gui.GUI_test1):
                 name = dialog.GetValue()
             dialog.Destroy()
             RxCadre().init_new_db(name,file_path)
-        self.db_picker.SetLabel(name)
+            if name[-3:] != '.db':
+                name = name + '.db'
+            self.db_picker.SetLabel(name)
+            self.change_tables()
+            
 
     def change_picker(self, event):
         name = self.db_picker.GetLabel()
+        file_path = self.cur_dir.GetLabel()
+        name = file_path + "/" + name
         table = self.combo.GetLabel()
         plots_new = RxCadre().change_picker(name, table)
         self.m_choice17.Clear()
@@ -107,12 +118,15 @@ class MakeFrame(test_gui.GUI_test1):
         if file_path == "":
             self.RxCadreIOError('Please select a directory')
         else:
-            dialog = wx.FileDialog(None, message = "Select data to import to the current database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
-            if dialog.ShowModal() == wx.ID_OK:
-                filename = dialog.GetPath()
-            dialog.Destroy()
-            RxCadre().import_data(filename, name)
-        self.change_tables(event)
+            if name == "":
+                self.RxCadreIOError('Please select a database')
+            else:
+                dialog = wx.FileDialog(None, message = "Select data to import to the current database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
+                if dialog.ShowModal() == wx.ID_OK:
+                    filename = dialog.GetPath()
+                dialog.Destroy()
+                RxCadre().import_data(filename, file_path+"/"+name)
+        self.change_tables()
         dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
         dialog.ShowModal()
 
@@ -122,6 +136,8 @@ class MakeFrame(test_gui.GUI_test1):
         else:
             
             name = self.db_picker.GetLabel()
+            file_path = self.cur_dir.GetLabel()
+            name = file_path + "/" + name
             if name[-3:] != '.db':
                 name = name + '.db'
             db = sqlite3.connect(name)
@@ -170,8 +186,8 @@ class MakeFrame(test_gui.GUI_test1):
                         self.RxCadreIOError('Please select two different times')
                     else:
                     
-                        kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),self.file_name.GetLabel(),title,self.start,self.end,db)
-                        RxCadre().create_csv(self.m_choice17.GetLabel(),self.file_name.GetLabel(),title,self.start,self.end,db)
+                        kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),self.cur_dir.GetLabel() + '/' + self.file_name.GetLabel(),title,self.start,self.end,db)
+                        RxCadre().create_csv(self.m_choice17.GetLabel(),self.cur_dir.GetLabel() + '/' + self.file_name.GetLabel(),title,self.start,self.end,db)
 
                         self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                         self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
@@ -198,6 +214,8 @@ class MakeFrame(test_gui.GUI_test1):
                         self.event_combo.Clear()
                         for e in events:
                             self.event_combo.Append(e)
+
+                        self.file_name.SetLabel("")
 
                         db.commit()
                         db.close()

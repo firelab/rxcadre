@@ -69,6 +69,9 @@ from windrose import *
 class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
 
+#<<<<<<< HEAD
+#logging.basicConfig(level=logging.INFO)
+#=======
 
 def file_acc(filepath, mode):
     ''' Check if a file exists and is accessible. '''
@@ -78,26 +81,27 @@ def file_acc(filepath, mode):
         return False
  
     return True
+#>>>>>>> First migration attempt
 
 def _import_date(string):
-    '''
+    """
     Parse a datetime from a UTC string
-    '''
+    """
     dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
     return dt
 
 def _export_date(dt):
-    '''
+    """
     Parse date time and return a string for query
-    '''
+    """
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
+
 def _extract_xy(wkt):
-    '''
+    """
     Extract x and y coordinates from wkt in the db.  Strip 'POINT' from the
     front, and split the remaining data losing the parentheses
-    '''
-    
+    """
 
     wkt = wkt.strip().upper()
     if wkt.find('POINT') < 0:
@@ -106,7 +110,6 @@ def _extract_xy(wkt):
     if len(wkt) != 2:
         print len(wkt), wkt
         raise ValueError
-    print wkt
     wkt[0] = wkt[0].replace("\"","")
     #wkt[0] = _to_decdeg(wkt[0])
 
@@ -115,17 +118,26 @@ def _extract_xy(wkt):
     
     return tuple([float(c) for c in wkt])
 
+
 def _to_decdeg(d):
+    """
+    Split a coordinate in degrees, decimal minutes to decimal degrees
+    """
+    logging.info('Converting %s to decimal degrees' % d)
     d = d.split("'")
     s = float(d[-1])
     s = s / 60.0
+#<<<<<<< HEAD
+#=======
     
+#>>>>>>> First migration attempt
     d, m = [float(f) for f in d[0].split('\xb0')]
     m += s
     m = m / 60.0
     if d < 0:
         m = m * -1
     d += m
+    logging.info('Converted to %f' % d)
     return d
 
 
@@ -195,6 +207,7 @@ class RxCadre:
         db = sqlite3.connect(name)
         if self.check_valid_db(db) == False:
             e ='The selected database appears to be of an incorrect format.  Please select a different database.'
+            print e
             db.commit()
             db.close()
             os.remove(name)
@@ -206,7 +219,7 @@ class RxCadre:
             tables = cursor.fetchall()
             tables = [t[0] for t in tables]
             
-        return tables
+            return tables
 
     def change_picker(self,name, table):
         """
@@ -317,32 +330,12 @@ class RxCadre:
         return events, projects
 
 
-    def update_tables(self):
-
-        name = self.db_picker.GetLabel()
-        if name[-3:] != '.db':
-            name = name+'.db'
-        db = sqlite3.connect(name)
-        cursor = db.cursor()
-        sql = "SELECT name FROM sqlite_master WHERE type='table'"
-        cursor.execute(sql)
-        table_names = cursor.fetchall()
-        self.combo.Clear()
-        table_names = [t[0] for t in table_names]
-        for i in range(0,len(table_names)):
-            table_names[i] = str(table_names[i])
-            if "plot_location" not in table_names[i] and "event" not in table_names[i] and "obs_table" not in table_names[i]:
-                self.combo.Append(table_names[i])
-
-
-
-
 
 
     def point_location(self, plot, db):
-        '''
+        """
         Fetch the x and y coordinate of the plot
-        '''
+        """
         cursor = db.cursor()
         sql = """SELECT geometry FROM plot_location WHERE plot_id=?"""
         cursor.execute(sql, (plot,))
@@ -352,9 +345,9 @@ class RxCadre:
 
 
     def fetch_point_data(self, plot, table,start, end,db):
-        '''
+        """
         Fetch data for a single point
-        '''
+        """
         
         cursor = db.cursor()
         sql = """SELECT * FROM """+table+"""
@@ -373,9 +366,9 @@ class RxCadre:
         return data
 
     def statistics(self, data,db):
-        '''
+        """
         Calculate the stats for speed and direction data
-        '''
+        """
         """Made it so this function can pull data from db or file"""
         if type(data) == str:
             cursor = db.cursor()
@@ -402,10 +395,10 @@ class RxCadre:
         return (spd_mean, spd_stddev), (gust_max), (direction_mean, direction_stddev)
 
     def _point_kml(self, plot, data, db, images=[]):
-        '''
+        """
         Create a kml representation of a plot
-        '''
-        print images
+        """
+        #print images
 
         lon, lat = self.point_location(plot,db)
         stats = self.statistics(data,db)
@@ -468,9 +461,9 @@ class RxCadre:
 
 
     def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
-        '''
+        """
         Create a time series image for the plot over the time span
-        '''
+        """
         if type(data) == list:
             spd = [float(spd[2]) for spd in data]
             gust = [float(gust[4]) for gust in data]
@@ -514,9 +507,9 @@ class RxCadre:
         return filename
 
     def create_windrose(self, data, filename,db):
-        '''
+        """
         Create a windrose from a dataset.
-        '''
+        """
         spd = [float(spd[2]) for spd in data]
         gust = [float(gust[4]) for gust in data]
         dir = [float(dir[3]) for dir in data]
@@ -547,13 +540,13 @@ class RxCadre:
             return None
 
     def create_field_kmz(self, filename, table,start,end,db):
-        '''
+        """
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
-        '''
+        """
         cursor = db.cursor()
-        sql = '''SELECT DISTINCT(plot_id) FROM mean_flow_obs
-                   WHERE date_time BETWEEN ? AND ?'''
+        sql = """SELECT DISTINCT(plot_id) FROM mean_flow_obs
+                   WHERE date_time BETWEEN ? AND ?"""
         cursor.execute(sql, (start, end))
 
         kmz = zipfile.ZipFile( filename, 'w', 0, True)
@@ -604,10 +597,10 @@ class RxCadre:
     
 
     def create_kmz(self, plot, filename,table,start,end,db):
-        '''
+        """
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
-        '''
+        """
         if filename == '':
             filename = plot
         if filename[-4:] != '.kmz':
@@ -775,7 +768,4 @@ time, date, plotID, wind speed, wind direction and wind gust column
 
     
        
-
-    
-
 

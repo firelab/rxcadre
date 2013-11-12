@@ -16,7 +16,7 @@ import wx
 class GUI_test1 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre_testGUI", pos = wx.DefaultPosition, size = wx.Size( 1378,856 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre", pos = wx.DefaultPosition, size = wx.Size( 1450,856 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
 		self.SetBackgroundColour('WHITE')
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
@@ -58,7 +58,7 @@ class GUI_test1 ( wx.Frame ):
 		self.m_staticText10.Wrap( -1 )
 		bSizer8.Add( self.m_staticText10, 0, wx.ALL, 5 )
 		
-		m_choice17Choices = [ u"L1G", u"S8", u"K1" ]
+		m_choice17Choices = [u'   ']
 		self.m_choice17 = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, m_choice17Choices, 0 )
 		self.m_choice17.SetSelection( 0 )
 		bSizer8.Add( self.m_choice17, 0, wx.ALL, 5 )
@@ -230,7 +230,6 @@ class GUI_test1 ( wx.Frame ):
 		self.Centre( wx.BOTH )
 		
 		# Connect Events
-		self.db_picker.Bind( wx.EVT_TEXT, self.change_tables )
 		self.combo.Bind( wx.EVT_COMBOBOX, self.change_picker )
 		self.combo.Bind( wx.EVT_TEXT_ENTER, self.change_picker )
 		self.m_button7.Bind( wx.EVT_BUTTON, self.create_all )
@@ -245,8 +244,7 @@ class GUI_test1 ( wx.Frame ):
 	
 	
 	# Virtual event handlers, overide them in your derived class
-	def change_tables( self, event ):
-		event.Skip()
+	
 	
 	def change_picker( self, event ):
 		event.Skip()
