@@ -1,5 +1,5 @@
 import wx
-import test_gui
+import wx_rxcadre_gui
 import sys
 import tempfile
 import unittest
@@ -24,17 +24,15 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-sys.path.append('../src')
-
 from rxcadre import *
 
 class RxCadreInvalidDbError(Exception):pass
 
-class MakeFrame(test_gui.GUI_test1):
+class MakeFrame(wx_rxcadre_gui.GUI_test1):
 
     def __init__(self,parent):
         
-        test_gui.GUI_test1.__init__(self,parent)
+        wx_rxcadre_gui.GUI_test1.__init__(self,parent)
 
     def RxCadreIOError(self, message):
         dialog = wx.MessageDialog(None, message, 'Error',wx.OK | wx.ICON_ERROR)
