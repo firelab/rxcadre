@@ -44,6 +44,7 @@ class MakeFrame(wx_rxcadre_gui.GUI_test1):
             dir = dialog.GetPath()
         dialog.Destroy()
         self.cur_dir.SetLabel(dir)
+        self.db_picker.SetLabel("")
 
     def change_tables(self):
         name = self.db_picker.GetLabel()
@@ -71,39 +72,40 @@ class MakeFrame(wx_rxcadre_gui.GUI_test1):
     def open_msg(self,event):
         file_path = self.cur_dir.GetLabel()
         if file_path == "":
-            self.RxCadreIOError('Please select a directory')
-        else:
-            dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
-            if dialog.ShowModal() == wx.ID_OK:
-                req_ext = '.db'
-                name = dialog.GetPath()
-                if os.path.splitext(name)[-1] != req_ext:
-                    name = name + req_ext
-                db = sqlite3.connect(name)
-                if RxCadre().check_valid_db(db) == False:
-                    self.RxCadreIOError('The selected database appears to be in the wrong format. Please make sure you selected a valid database.')
-                else:
-                    self.db_picker.SetLabel(os.path.split(name)[-1])
-                    self.change_tables()
-                    dialog.Destroy()
+            file_path = os.path.abspath("")
+        
+        dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
+        if dialog.ShowModal() == wx.ID_OK:
+            req_ext = '.db'
+            name = dialog.GetPath()
+            if os.path.splitext(name)[-1] != req_ext:
+                name = name + req_ext
+            db = sqlite3.connect(name)
+            if RxCadre().check_valid_db(db) == False:
+                self.RxCadreIOError('The selected database appears to be in the wrong format. Please make sure you selected a valid database.')
+            else:
+                self.db_picker.SetLabel(os.path.split(name)[-1])
+                self.change_tables()
+                dialog.Destroy()
 
     def create_db(self,event):
         file_path = self.cur_dir.GetLabel()
         if file_path == "":
-            self.RxCadreIOError('Please select a directory')
-        else:
-            dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database")
-            if dialog.ShowModal() == wx.ID_OK:
-                name = dialog.GetValue()
-            dialog.Destroy()
-            RxCadre().init_new_db(os.path.join(file_path, name))
-            self.db_picker.SetLabel(name)
-            self.change_tables()
+            file_path = os.path.abspath("")
+        dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database")
+        if dialog.ShowModal() == wx.ID_OK:
+            name = dialog.GetValue()
+        dialog.Destroy()
+        RxCadre().init_new_db(os.path.join(file_path, name))
+        self.db_picker.SetLabel(name)
+        self.change_tables()
 
 
     def change_picker(self, event):
         name = self.db_picker.GetLabel()
         file_path = self.cur_dir.GetLabel()
+        if file_path == "":
+            file_path = os.path.abspath("")
         name = os.path.join(file_path, name)
         table = self.combo.GetLabel()
         plots_new = RxCadre().change_picker(name, table)
@@ -115,124 +117,123 @@ class MakeFrame(wx_rxcadre_gui.GUI_test1):
         file_path = self.cur_dir.GetLabel()
         name = self.db_picker.GetLabel()
         if file_path == "":
-            self.RxCadreIOError('Please select a directory')
+            file_path = os.path.abspath("")
+        if name == "":
+            self.RxCadreIOError('Please select a database')
         else:
-            if name == "":
-                self.RxCadreIOError('Please select a database')
-            else:
-                dialog = wx.FileDialog(None, message = "Select data to import to the current database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
-                if dialog.ShowModal() == wx.ID_OK:
-                    filename = dialog.GetPath()
-                dialog.Destroy()
-                if RxCadre().check_valid_file(filename) == False:
-                    self.RxCadreIOError("""
+            dialog = wx.FileDialog(None, message = "Select data to import to the current database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
+            if dialog.ShowModal() == wx.ID_OK:
+                filename = dialog.GetPath()
+            dialog.Destroy()
+            if RxCadre().check_valid_file(filename) == False:
+                self.RxCadreIOError("""
 The selected data does not include the necessary fields for analysis. 
 Please make sure that the selected data includes a separate
 time, date, plotID, wind speed, wind direction and wind gust column
                                          """)
+            else:
+                fullname = os.path.join(file_path,name)
+                tables = RxCadre().change_tables(fullname)
+                filename_hold = os.path.splitext(filename)[-2]
+                filename_hold = os.path.basename(filename_hold)
+                if filename_hold in tables:
+                    self.RxCadreIOError('This data has already been imported.')
                 else:
-                    fullname = os.path.join(file_path,name)
-                    tables = RxCadre().change_tables(fullname)
-                    filename_hold = os.path.splitext(filename)[-2]
-                    filename_hold = os.path.basename(filename_hold)
-                    if filename_hold in tables:
-                        self.RxCadreIOError('This data has already been imported.')
-                    else:
-                        RxCadre().import_data(filename, os.path.join(file_path,name))
-                        self.change_tables()
-                        dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
-                        dialog.ShowModal()
+                    RxCadre().import_data(filename, os.path.join(file_path,name))
+                    self.change_tables()
+                    dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
+                    dialog.ShowModal()
 
     def create_all(self,event):
         if (self.db_picker.GetLabel() == ""):
             self.RxCadreIOError('Please Select a Database')
+        name = self.db_picker.GetLabel()
+        file_path = self.cur_dir.GetLabel()
+        if file_path == "":
+            file_path = os.path.abspath("")
+        name = os.path.join(file_path, name)
+        req_ext = '.db'
+        if os.path.splitext(name)[-1] != req_ext:
+            name = name + req_ext
+        db = sqlite3.connect(name)
+            
+        cursor = db.cursor()
+            
+        if (self.combo.GetLabel() == ""):
+            self.RxCadreIOError('Please select a data table')
         else:
-            
-            name = self.db_picker.GetLabel()
-            file_path = self.cur_dir.GetLabel()
-            name = os.path.join(file_path, name)
-            req_ext = '.db'
-            if os.path.splitext(name)[-1] != req_ext:
-                name = name + req_ext
-            db = sqlite3.connect(name)
-            
-            cursor = db.cursor()
-            
-            if (self.combo.GetLabel() == ""):
-                self.RxCadreIOError('Please select a data table')
+
+            if (self.combo.GetLabel() != ""):
+                title = self.combo.GetLabel()
+                
+                
+            if (self.event_combo.GetLabel() == ""):
+                begin = self.start_date.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
+                stop = self.stop_date.GetLabel() + " "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
+            if (self.event_combo.GetLabel() != ""):
+                name = self.event_combo.GetLabel()
+                sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"
+                cursor.execute(sql)
+                time = cursor.fetchall()
+                time = time[0]
+                begin = str(time[0])
+                stop = str(time[1])
+
+            if self.file_name.GetLabel() == "":
+                new_label = self.m_choice17.GetLabel()+"_"+begin+"_"+stop
+                new_label = new_label.replace(" ","_")
+                new_label = new_label.replace("/","-")
+                new_label = new_label.replace(":",".")
+                self.file_name.SetLabel(new_label)
+            sql = "SELECT event_name FROM event"
+            cursor.execute(sql)
+            events = [e[0] for e in cursor.fetchall()]
+            if self.file_name.GetLabel() in events:
+                self.RxCadreIOError('This table already exists in this database')
             else:
 
-                if (self.combo.GetLabel() != ""):
-                    title = self.combo.GetLabel()
-                
-                
-                if (self.event_combo.GetLabel() == ""):
-                    begin = self.start_date.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
-                    stop = self.stop_date.GetLabel() + " "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
-                if (self.event_combo.GetLabel() != ""):
-                    name = self.event_combo.GetLabel()
-                    sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"
-                    cursor.execute(sql)
-                    time = cursor.fetchall()
-                    time = time[0]
-                    begin = str(time[0])
-                    stop = str(time[1])
-
-                if self.file_name.GetLabel() == "":
-                    new_label = self.m_choice17.GetLabel()+"_"+begin+"_"+stop
-                    new_label = new_label.replace(" ","_")
-                    new_label = new_label.replace("/","-")
-                    new_label = new_label.replace(":",".")
-                    self.file_name.SetLabel(new_label)
-                sql = "SELECT event_name FROM event"
-                cursor.execute(sql)
-                events = [e[0] for e in cursor.fetchall()]
-                if self.file_name.GetLabel() in events:
-                    self.RxCadreIOError('This table already exists in this database')
+                event_vals =  "RxCadre",self.file_name.GetLabel(),begin,stop
+                cursor.execute("INSERT INTO event VALUES (?,?,?,?)",event_vals)
+                    
+                self.start = datetime.datetime.strptime(begin, '%m/%d/%Y %I:%M:%S %p')
+                self.end = datetime.datetime.strptime(stop, '%m/%d/%Y %I:%M:%S %p')
+                if self.start == self.end:
+                    self.RxCadreIOError('Please select two different times')
                 else:
-
-                    event_vals =  "RxCadre",self.file_name.GetLabel(),begin,stop
-                    cursor.execute("INSERT INTO event VALUES (?,?,?,?)",event_vals)
                     
-                    self.start = datetime.datetime.strptime(begin, '%m/%d/%Y %I:%M:%S %p')
-                    self.end = datetime.datetime.strptime(stop, '%m/%d/%Y %I:%M:%S %p')
-                    if self.start == self.end:
-                        self.RxCadreIOError('Please select two different times')
-                    else:
-                    
-                        kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(self.cur_dir.GetLabel(),self.file_name.GetLabel()),title,self.start,self.end,db)
-                        RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(self.cur_dir.GetLabel(),self.file_name.GetLabel()),title,self.start,self.end,db)
+                    kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(self.cur_dir.GetLabel(),self.file_name.GetLabel()),title,self.start,self.end,db)
+                    RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(self.cur_dir.GetLabel(),self.file_name.GetLabel()),title,self.start,self.end,db)
 
-                        self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-                        self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
+                    self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                    self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
                     
 
 
-                        self.bmp2 = wx.Image(self.m_choice17.GetLabel()+'_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-                        self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
-                        self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
+                    self.bmp2 = wx.Image(self.m_choice17.GetLabel()+'_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                    self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
+                    self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
 
 
-                        self.plot_time.Refresh()
-                        self.plot_rose.Refresh()
+                    self.plot_time.Refresh()
+                    self.plot_rose.Refresh()
 
-                        os.remove(self.m_choice17.GetLabel()+'_time.png')
-                        os.remove(self.m_choice17.GetLabel()+'_rose.png')
+                    os.remove(self.m_choice17.GetLabel()+'_time.png')
+                    os.remove(self.m_choice17.GetLabel()+'_rose.png')
 
-                        sql = "SELECT event_name FROM event"
-                        cursor.execute(sql)
-                        events = cursor.fetchall()
-                        events = [e[0] for e in events]
-                        for i in range(0,len(events)):
-                            events[i] = str(events[i])
-                        self.event_combo.Clear()
-                        for e in events:
-                            self.event_combo.Append(e)
+                    sql = "SELECT event_name FROM event"
+                    cursor.execute(sql)
+                    events = cursor.fetchall()
+                    events = [e[0] for e in events]
+                    for i in range(0,len(events)):
+                        events[i] = str(events[i])
+                    self.event_combo.Clear()
+                    for e in events:
+                        self.event_combo.Append(e)
 
-                        self.file_name.SetLabel("")
+                    self.file_name.SetLabel("")
 
-                        db.commit()
-                        db.close()
+                    db.commit()
+                    db.close()
 
 
 
