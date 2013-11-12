@@ -247,20 +247,15 @@ class RxCadre:
 
         
 
-    def init_new_db(self, filename,filepath):
+    def init_new_db(self, filename):
         """
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
         """
-        if filename[-3:] != '.db':
-            filename = filename + '.db'
-        if filepath[-1] != '\\':
-            filepath = filepath + '\\'
-        if file_acc(filepath+filename,"r") == True:
+        if(os.path.exists(filename)):
             e = "Database file already exists"
         else:
-            filename = filepath  + filename
             db = sqlite3.connect(filename)
             cursor = db.cursor()
             sql = """CREATE TABLE plot_location(plot_id TEXT, 

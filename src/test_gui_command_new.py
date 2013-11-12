@@ -77,12 +77,11 @@ class MakeFrame(test_gui.GUI_test1):
         else:
             dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
             if dialog.ShowModal() == wx.ID_OK:
+                req_ext = '.db'
                 name = dialog.GetPath()
-                if name[-3:] != '.db':
-                    name = name + '.db'
-                index = max(name.rfind("/"),name.rfind("\\"))
-                name = name[index+1:]
-                self.db_picker.SetLabel(name)
+                if os.path.splitext(name) != req_ext:
+                    name = name + req_ext
+                self.db_picker.SetLabel(os.path.split(name)[-1])
                 self.change_tables()
                 dialog.Destroy()
 
@@ -95,12 +94,10 @@ class MakeFrame(test_gui.GUI_test1):
             if dialog.ShowModal() == wx.ID_OK:
                 name = dialog.GetValue()
             dialog.Destroy()
-            RxCadre().init_new_db(name,file_path)
-            if name[-3:] != '.db':
-                name = name + '.db'
+            RxCadre().init_new_db(os.path.join(file_path, name))
             self.db_picker.SetLabel(name)
             self.change_tables()
-            
+
 
     def change_picker(self, event):
         name = self.db_picker.GetLabel()
