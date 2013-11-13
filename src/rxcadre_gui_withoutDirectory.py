@@ -1,5 +1,5 @@
 import wx
-
+#This file controls the architecture of the GUI.  
 
 class GUI_test2 ( wx.Frame ):
 	
@@ -32,7 +32,7 @@ class GUI_test2 ( wx.Frame ):
 		bSizer8.Add( self.m_staticText9, 0, wx.ALL, 5 )
 		
 		comboChoices = []
-		self.combo = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, comboChoices, 0 )
+		self.combo = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, comboChoices, 0 )
 		bSizer8.Add( self.combo, 0, wx.ALL, 5 )
 		
 		self.m_staticText10 = wx.StaticText( self, wx.ID_ANY, u"Select PlotID", wx.DefaultPosition, wx.DefaultSize, 0 )
@@ -84,7 +84,7 @@ class GUI_test2 ( wx.Frame ):
 		bSizer9.Add( self.m_staticText13, 0, wx.ALL, 5 )
 		
 		event_comboChoices = []
-		self.event_combo = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, event_comboChoices, 0 )
+		self.event_combo = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, event_comboChoices, 0 )
 		bSizer9.Add( self.event_combo, 0, wx.ALL, 5 )
 		
 		bSizer6.Add( bSizer9, 0, wx.EXPAND, 5 )
@@ -181,8 +181,7 @@ class GUI_test2 ( wx.Frame ):
 		self.Centre( wx.BOTH )
 		
 		# Connect Events
-		self.combo.Bind( wx.EVT_COMBOBOX, self.change_picker )
-		self.combo.Bind( wx.EVT_TEXT_ENTER, self.change_picker )
+		self.combo.Bind( wx.EVT_CHOICE, self.change_picker )
 		self.m_button7.Bind( wx.EVT_BUTTON, self.create_all )
 		self.Bind( wx.EVT_MENU, self.open_msg, id = self.m_menuItem1.GetId() )
 		self.Bind( wx.EVT_MENU, self.create_db, id = self.m_menuItem2.GetId() )
@@ -196,7 +195,6 @@ class GUI_test2 ( wx.Frame ):
 	# Virtual event handlers, overide them in your derived class
 	def change_picker( self, event ):
 		event.Skip()
-	
 	
 	def create_all( self, event ):
 		event.Skip()
