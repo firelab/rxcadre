@@ -1,5 +1,5 @@
 import wx
-import rxcadre_gui_withoutDirectory
+import wx_rxcadre_gui
 import sys
 import tempfile
 import unittest
@@ -28,11 +28,11 @@ from rxcadre import *
 
 class RxCadreInvalidDbError(Exception):pass
 
-class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
+class MakeFrame(wx_rxcadre_gui.GUI_test2):
 
     def __init__(self,parent):
         
-        rxcadre_gui_withoutDirectory.GUI_test2.__init__(self,parent)
+        wx_rxcadre_gui.GUI_test2.__init__(self,parent)
 
     def RxCadreIOError(self, message):
         dialog = wx.MessageDialog(None, message, 'Error',wx.OK | wx.ICON_ERROR)
@@ -225,32 +225,32 @@ time, date, plotID, wind speed, wind direction and wind gust column
     def about(self,event):
         about_message = """
                            To begin using the RxCadre GUI first select 'File' in the upper Menu Bar. 
-                           Three options will appear, 'Select Database', 'Create Database' and 'Select Directory'. 
-                           First, click 'Select Directory'.  A browser will open allowing you to select a 
-                           directory in which you'd like your files to appear.  Next select 'Create Database'. 
-                           This will open a prompt asking for a name of the new database.  Enter a name you would 
-                           like and it will be created in the directory you chose in the previous step.  You may now 
+                           Two options will appear, 'Select Database' and 'Create Database'. 
+                           First, select 'Create Database'. This will open a window in which you can navigate
+                           to a location for your future database.  Once a suitable location has been selected
+                           a prompt will appear asking for a name of the new database.  Enter a name  
+                           and it will be created in the directory you chose in the previous step.  The name of the database
+                           you chose has now populated the 'Current Database' window in the interface.  You may now 
                            begin importing data.  Returning to the Menu Bar, select Edit now.  You should see only one 
                            option: 'Import Data'.  Click it and a window will appear.  Navigate to data you'd like 
-                           to add to the current database and the data will be imported.  The name of the database as
-                           well as the name of the directory you chose have now populated windows in the interface
-                           next to the labels 'Current Directory' and 'Current Database'.  \n 
+                           to add to the current database and the data will be imported.  Once imported successfully
+                           a prompt will appear letting you know the data has been imported.  \n 
                            You may now select parameters for analysis.  You will see a label in the interface labeled 
                            'Select Table'.  After importing data into the database this menu will auto-populate with 
                            all data tables contained in the current database.  Simply click a value to select it. 
-                           Next, find a label that reads 'Select PlotID'.  A choice-list will be next to it.  This 
+                           Next, find a label that reads 'Select PlotID'.  A list will be next to it.  This 
                            has auto-populated with all unique plot IDs from the chosen table. Select a plot ID for 
                            analysis and continue to the next step.  \n 
-                           You should now see many drop-down menus next to the labels 'Select Start Date', 
+                           You should now see many menus next to the labels 'Select Start Date', 
                            'Select Start Time', 'Select End Date' and 'Select End Time'.  These menus allow you 
                            to enter an exact time and date at which to begin end analysis.  The first menu  
-                           is to select a month in numeric form (January = 1, February = 2 etc...) followed 
-                           by day and then year.  This form is the same for both End Date and Start Date.  The first menu following the 
+                           is to select a date in numeric form (January = 1, February = 2 etc...).
+                           This form is the same for both End Date and Start Date.  The first menu following the 
                            'Select Start Time' and 'Select End Time' label will select an hour (12 hour format), followed 
                            by minute, second and AM/PM.  If you'd like to see all data from a table you can select a
                            time frame that includes all the acquired data.\n  
                            You're finally ready to analyze the data.  You may create a specific name for the outputs 
-                           by editing the textbox next to the label 'Name for kmz output', but if you elect 
+                           by editing the textbox next to the label 'Name for output files', but if you elect 
                            to keep this box empty a name will be auto-generated based on the plotID and timeframe. 
                            Now press 'Create Plots'.  Two plots should appear in the interface.  This may take a 
                            few seconds.  Additionally, the selected data will appear in its own .csv file along 

@@ -135,7 +135,7 @@ class GUI_test2 ( wx.Frame ):
 		
 		bSizer12.AddSpacer( ( 0, 0), 1, wx.EXPAND, 5 )
 		
-		self.m_staticText101 = wx.StaticText( self, wx.ID_ANY, u"Name for kmz output:", wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_staticText101 = wx.StaticText( self, wx.ID_ANY, u"Name for output files:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText101.Wrap( -1 )
 		bSizer12.Add( self.m_staticText101, 0, wx.ALL, 5 )
 		
