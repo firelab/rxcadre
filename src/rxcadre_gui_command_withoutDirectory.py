@@ -39,9 +39,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
         dialog.ShowModal()
 
     def change_tables(self):
-        name = self.db_picker.GetLabel()
-        file_path = os.path.abspath("")
-        name = os.path.join(file_path, name)
+        name = self.db
         tables = RxCadre().change_tables(name)
         self.combo.Clear()
         for i in range(0,len(tables)):
@@ -75,6 +73,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
                 self.RxCadreIOError('The selected database appears to be in the wrong format. Please make sure you selected a valid database.')
             else:
                 self.db_picker.SetLabel(os.path.split(name)[-1])
+                self.db = name
                 self.change_tables()
                 dialog.Destroy()
 
@@ -89,13 +88,13 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
                 name = name + '.db'
         dialog.Destroy()
         RxCadre().init_new_db(os.path.join(dir,name))
+        self.db = os.path.join(dir,name)
         self.db_picker.SetLabel(name)
         self.change_tables()
 
 
     def change_picker(self, event):
-        name = self.db_picker.GetLabel()
-        name = os.path.abspath(name)
+        name = self.db
         table = self.combo.GetLabel()
         plots_new = RxCadre().change_picker(name, table)
         self.m_choice17.Clear()
@@ -103,7 +102,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
             self.m_choice17.Append(p)
 
     def import_data2(self,event):
-        name = self.db_picker.GetLabel()
+        name = self.db
         file_path = os.path.abspath("")
         if name == "":
             self.RxCadreIOError('Please select a database')
@@ -119,14 +118,13 @@ Please make sure that the selected data includes a separate
 time, date, plotID, wind speed, wind direction and wind gust column
                                          """)
             else:
-                fullname = os.path.join(file_path,name)
-                tables = RxCadre().change_tables(fullname)
+                tables = RxCadre().change_tables(name)
                 filename_hold = os.path.splitext(filename)[-2]
                 filename_hold = os.path.basename(filename_hold)
                 if filename_hold in tables:
                     self.RxCadreIOError('This data has already been imported.')
                 else:
-                    RxCadre().import_data(filename, os.path.abspath(name))
+                    RxCadre().import_data(filename, name)
                     self.change_tables()
                     dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
                     dialog.ShowModal()
@@ -134,8 +132,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
     def create_all(self,event):
         if (self.db_picker.GetLabel() == ""):
             self.RxCadreIOError('Please Select a Database')
-        name = self.db_picker.GetLabel()
-        name = os.path.abspath(name)
+        fname = self.db
+        name = fname
         req_ext = '.db'
         if os.path.splitext(name)[-1] != req_ext:
             name = name + req_ext
@@ -184,9 +182,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 if self.start == self.end:
                     self.RxCadreIOError('Please select two different times')
                 else:
-                    
-                    kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.abspath(self.file_name.GetLabel()),title,self.start,self.end,db)
-                    RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.abspath(self.file_name.GetLabel()),title,self.start,self.end,db)
+                    kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,db)
+                    RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,db)
 
                     self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                     self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
