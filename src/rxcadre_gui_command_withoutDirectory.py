@@ -79,11 +79,16 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
                 dialog.Destroy()
 
     def create_db(self,event):
+        dialog = wx.DirDialog(None, message = "Choose a Directory:",style=wx.DD_DEFAULT_STYLE)
+        if dialog.ShowModal() == wx.ID_OK:
+            dir = dialog.GetPath()
         dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database")
         if dialog.ShowModal() == wx.ID_OK:
             name = dialog.GetValue()
+            if name[-3:] != '.db':
+                name = name + '.db'
         dialog.Destroy()
-        RxCadre().init_new_db(os.path.abspath(name))
+        RxCadre().init_new_db(os.path.join(dir,name))
         self.db_picker.SetLabel(name)
         self.change_tables()
 
