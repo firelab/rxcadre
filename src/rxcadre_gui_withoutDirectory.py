@@ -4,8 +4,11 @@ import wx
 class GUI_test2 ( wx.Frame ):
 	
 	def __init__( self, parent ):
-		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre", pos = wx.DefaultPosition, size = wx.Size( 1450,856 ), style = wx.DEFAULT_FRAME_STYLE|wx.TAB_TRAVERSAL )
+		wx.Frame.__init__ ( self, parent, id = wx.ID_ANY, title = u"RxCadre", pos = wx.DefaultPosition, size = wx.Size( 1450,856 ), style = wx.DEFAULT_FRAME_STYLE )
 		self.SetBackgroundColour('WHITE')
+		#Set icon below if we care to
+		#ico = wx.Icon('C:\Program Files (x86)\Google\Google Earth\plugin\google_earth.ico',wx.BITMAP_TYPE_ICO)
+		#self.SetIcon(ico)
 		self.SetSizeHintsSz( wx.DefaultSize, wx.DefaultSize )
 		
 		bSizer6 = wx.BoxSizer( wx.VERTICAL )
