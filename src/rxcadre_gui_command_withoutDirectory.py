@@ -60,6 +60,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
             self.proj_combo.Append(p)
 
     def open_msg(self,event):
+        #can't use os.path.dirname(self.db) here because it hasn't been declared yet
         file_path = os.path.abspath("")
         
         dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
@@ -81,7 +82,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
         dialog = wx.DirDialog(None, message = "Choose a Directory:",style=wx.DD_DEFAULT_STYLE)
         if dialog.ShowModal() == wx.ID_OK:
             dir = dialog.GetPath()
-        dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database")
+        dialog = wx.TextEntryDialog(None,message="Enter a name for the new Database",caption = 'Name Entry')
         if dialog.ShowModal() == wx.ID_OK:
             name = dialog.GetValue()
             if name[-3:] != '.db':
@@ -103,7 +104,7 @@ class MakeFrame(rxcadre_gui_withoutDirectory.GUI_test2):
 
     def import_data2(self,event):
         name = self.db
-        file_path = os.path.abspath("")
+        file_path = os.path.dirname(name)
         if name == "":
             self.RxCadreIOError('Please select a database')
         else:
