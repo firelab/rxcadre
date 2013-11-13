@@ -296,7 +296,8 @@ class RxCadre:
             sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
                                             geometry_column TEXT NOT NULL,
                                             obs_cols TEXT NOT NULL,
-                                            obs_col_names TEXT)"""
+                                            obs_col_names TEXT,
+                                            obs_disp_names TEXT)"""
             cursor.execute(sql)
             db.commit()
             #update tables, update events, set db_picker to filename
@@ -770,8 +771,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
             #update tables
 
 
-            obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
-            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?)",obs_vals)
+            obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "plot_id,time,speed,dir,gust","PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
+            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?,?)",obs_vals)
 
             #msg_import
                
