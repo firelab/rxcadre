@@ -66,8 +66,10 @@ import wx
 sys.path.append(os.path.abspath('windrose'))
 from windrose import *
 
-class RxCadreIOError(Exception):pass
-class RxCadreInvalidDbError(Exception):pass
+class RxCadreError(Exception):pass
+class RxCadreIOError(RxCadreError):pass
+class RxCadreInvalidDbError(RxCadreError):pass
+class RxCadreInvalidDataError(RxCadreError):pass
 
 logging.basicConfig(level=logging.INFO)
 
@@ -128,6 +130,48 @@ class RxCadre:
     """
     Main interface for RX Cadre data.
     """
+    def __init__(self, db_file=None, new=False):
+        if not new:
+            try:
+                self.db = sqlite3.connect(db_file)
+                self.check_valid_db(self.db)
+                self.cur = self.db.cursor()
+            except:
+                self.db = None
+                self.cur = None
+        else:
+            try:
+                self.db = self.init_new_db(db_file)
+                self.cur = self.db.cursor()
+            except:
+                self.db = None
+                self.cur = None
+
+    def __del__(self):
+        """
+        Cleanup, mainly close the db
+        """
+        if self.db:
+            self.db.close()
+
+    def set_db(self, db):
+        '''
+        Set a new db
+        '''
+        if self.check_valid_db(db):
+            self.db = db
+            self.cur = self.db.cursor()
+        else:
+            raise RxCadreInvalidDbError("Could not set new database")
+
+    def check_db(self):
+        """
+        Simple check to make sure our internal db handle is good.
+        """
+        if self.db is None or self.cur is None:
+            raise RxCadreInvalidDbError("Invalid database")
+
+
     def check_valid_file(self,filepath):
         f= open(filepath,'r')
         header = f.readline().split(",")
@@ -163,21 +207,6 @@ class RxCadre:
         begin = str(time[0])
         stop = str(time[1])
         return begin, stop
-
-    def create_title(self, begin, stop):
-        new_label = self.m_choice17.GetLabel()+"_"+begin+"_"+stop
-        new_label = new_label.replace(" ","_")
-        new_label = new_label.replace("/","-")
-        new_label = new_label.replace(":",".")
-        self.file_name.SetLabel(new_label)
-        return new_label
-
-    def get_project(self,event):
-        if self.proj_combo.GetLabel() == "":
-            project = "RxCadre"
-        else:
-            project = self.proj_combo.GetLabel()
-        return project
 
 
     def change_tables(self,name):
@@ -235,34 +264,36 @@ class RxCadre:
         a new file.
         """
         if(os.path.exists(filename)):
-            e = "Database file already exists"
+            raise RxCadreIOError("File exists.")
+        db = sqlite3.connect(filename)
+        if not db:
+            raise RxCadreIOError("Could not create database")
+        cursor = db.cursor()
+        sql = """CREATE TABLE plot_location(plot_id TEXT, 
+                                            geometry TEXT, plot_type TEXT)"""
+        cursor.execute(sql)
+        sql = """CREATE TABLE event(project_name TEXT,
+                                    event_name TEXT NOT NULL,
+                                    event_start TEXT NOT NULL,
+                                    event_end TEXT NOT NULL,
+                                    PRIMARY KEY(project_name, event_name))"""
+        cursor.execute(sql)
+        sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+                                        timestamp_column TEXT NOT NULL,
+                                        geometry_column TEXT NOT NULL,
+                                        obs_cols TEXT NOT NULL,
+                                        obs_col_names TEXT,
+                                        obs_disp_names TEXT)"""
+        cursor.execute(sql)
+        db.commit()
+        #update tables, update events, set db_picker to filename
+        valid = self.check_valid_db(db)
+        if not valid:
+            db.close()
+            e = "Failed to create a valid database."
+            self.RxCadreIOError(e)
         else:
-            db = sqlite3.connect(filename)
-            cursor = db.cursor()
-            sql = """CREATE TABLE plot_location(plot_id TEXT, 
-                                                geometry TEXT, plot_type TEXT)"""
-            cursor.execute(sql)
-            sql = """CREATE TABLE event(project_name TEXT,
-                                        event_name TEXT NOT NULL,
-                                        event_start TEXT NOT NULL,
-                                        event_end TEXT NOT NULL,
-                                        PRIMARY KEY(project_name, event_name))"""
-            cursor.execute(sql)
-            sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
-                                            geometry_column TEXT NOT NULL,
-                                            obs_cols TEXT NOT NULL,
-                                            obs_col_names TEXT,
-                                            obs_disp_names TEXT)"""
-            cursor.execute(sql)
-            db.commit()
-            #update tables, update events, set db_picker to filename
-            valid = self.check_valid_db(db)
-            if not valid:
-                db.close()
-                e = "Failed to create a valid database."
-                self.RxCadreIOError(e)
-            else:
-                return db
+            return db
 
 
     def check_valid_db(self, db):
@@ -304,6 +335,16 @@ class RxCadre:
         cursor.execute(sql)
         projects = [c[0] for c in cursor.fetchall()]
         return events, projects
+
+    def get_obs_table_names(self):
+        """
+        Get the names of all stored observation tables as a list of strings.
+        """
+        self.check_db()
+        sql = "SELECT obs_table_name FROM obs_table"
+        self.cur.execute(sql)
+        names = [n[0] for n in self.cur.fetchall()]
+        return names
 
 
     def point_location(self, plot, db):
@@ -432,6 +473,70 @@ class RxCadre:
                             '  </Placemark>\n'
         return kml
 
+
+    def extract_obs_data(self, table_name, plot_name, start=None, end=None,
+                         cols={}):
+        '''
+        Extract data from a table in obs_table for generating output.
+
+        :param table_name: Name of the table to query.  Must be in the
+                           obs_table.
+
+        :param plot_name: Name of the plot to extract data for.  Must be in the
+                          plot_location table.
+
+        :param start: datetime representation of when to start data extraction,
+                      if absent, use earliest available timestamp.
+
+        :param end: datetime representation of when to end data extraction,
+                    if absent, use latest available timestamp.
+
+        :param cols: dictionary with keys representing names of columns to
+                     extract.  If absent, the metadata from obs_table (obs_cols
+                     and obs_col_names) will be used.  The values associated
+                     with the keys are human readable names for display.  If
+                     they are absent, obs_col_names is checked, and then the
+                     text in obs_cols is used.  If present, it the keys *must*
+                     be a subset of columns in the obs_tables/obs_cols values
+
+        :return: A dictionary with keys of {obs_cols:obs_names} keys and lists
+                 of values, ie:
+
+                 {'wind_spd' : 'Wind Speed(mph)'} : [2.3,4.6,4.4]}
+        '''
+
+        sql = '''SELECT * FROM obs_table WHERE obs_table_name=?'''
+        self.cur.execute(sql, (table_name,))
+        row = self.cur.fetchone()
+        if not row:
+            raise RxCadreInvalidDataError('Table %s is not in obs_table' %
+                                          table_name)
+        time_col = row[1]
+        geom_col = row[2]
+        obs_cols = [c.strip() for c in row[3].split(',')]
+        obs_names = [c.strip() for c in row[4].split(',')]
+        # TODO: Check columns against supplied columns, not supported yet.
+        col_def = ''
+        for i, col in enumerate(obs_cols):
+            col_def += '%s as %s' % (col, obs_names[i])
+            if i < len(obs_cols) -1:
+                col_def += ','
+        logging.debug('SQL as stmt: %s' % col_def)
+        sql = '''
+              SELECT %s as timestamp, %s FROM %s WHERE plot_id=?
+              ''' % (time_col, col_def, table_name)
+        #AND %s BETWEEN ? AND ?
+        logging.debug('Unbound sql: %s' % sql)
+        self.cur.execute(sql, (plot_name,))
+
+        rows = self.cur.fetchall()
+
+        data = dict()
+        data['timestamp'] = [r[0] for r in rows]
+        for i, c in enumerate(obs_cols):
+            data[c] = [r[i+1] for r in rows]
+
+        return data
 
     def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
         """
@@ -718,10 +823,120 @@ time, date, plotID, wind speed, wind direction and wind gust column
             db.close()
             p = "Data imported successfully"
 
+def rxcadre_main(args):
+    """
+    Run the command line stuff.
+    """
+    if args.sub_cmd == 'create':
+        RxCadre(args.database)
+        rx.init_new_db(args.database)
 
-def usage():
-    print('')
+    elif args.sub_cmd == 'import':
+        rx.import_
+
+    elif args.sub_cmd == 'info':
+        if args.show_obs_tables:
+            names = rx.get_obs_table_names()
+            print('Tables: %s' % ','.join(names))
+
+    elif args.sub_cmd == 'graph':
+        pass
+
 
 if __name__ == "__main__":
-    pass
+    """
+    Command line interface for extracting data.  Users should be able to use
+    the cli for extracting one or more plots for a given time period or event.
+    Users should also be able to extract meta information from a db.  Editing
+    is also allowed.  The functions are accessed via the subcommands:
+    rxcadre create
+    rxcadre import
+    rxcadre export
+    rxcadre info
+    rxcadre edit
+    """
+
+    import argparse
+
+    """
+    Main parser.  All commands take a database to act on, so that is the last
+    argument for everything.
+    """
+    parser = argparse.ArgumentParser(prog='rxcadre')
+    subparsers = parser.add_subparsers(help='sub-command help', dest='sub_cmd')
+
+    """
+    Create a new database parser.  Only needs the database name.
+    """
+    parser_create = subparsers.add_parser('create', help='Create an empty db')
+
+    """
+    Import csv parser with options for naming the table and columns.
+    """
+    parser_import = subparsers.add_parser('import', help='Import csv data')
+    parser_import.add_argument('input_file', type=str,
+                               help='csv file to import')
+    parser_import.add_argument('--columns', dest='columns', type=str,
+                               nargs='*', default=[],
+                               help='Columns to import, default is all')
+    parser_import.add_argument('--column_names', dest='column_names',
+                               type=str, nargs='*', default=[],
+                               help='Display column names')
+    """
+    Export parser.
+    """
+    parser_extract = subparsers.add_parser('export', help='Extract plot data')
+    parser_extract.add_argument('--plots', dest='plot', type=str,
+                                nargs='*', default=[],
+                                help='Plot names to extract')
+    parser_extract.add_argument('--start', dest='start', type=str,
+                                default=None, help='Start time for subset')
+    parser_extract.add_argument('--end', dest='end', type=str,
+                                default=None, help='End time for subset')
+    parser_extract.add_argument('--event', dest='event', type=str,
+                                default='', help='Use start/end from an event')
+    parser_extract.add_argument('--kmz', dest='kmz', action='store_true',
+                                help='Create a kmz file')
+    parser_extract.add_argument('--csv', dest='csv', action='store_true',
+                                default='', help='Create a csv file')
+    parser_extract.add_argument('--rose', dest='rose', action='store_true',
+                                help='Create a windrose file')
+    parser_extract.add_argument('--timeseries', dest='timeseries',
+                                action='store_true',
+                                help='Create a timeseries file')
+    parser_extract.add_argument('--show-only', dest='show-only',
+                                action='store_true',
+                                help='Show the images, don\'t write a file')
+    parser_extract.add_argument('--base-name', type=str, default='',
+                                help='Base filename for output')
+    #parser_extract.add_argument('--zip', dest='zip', action='store_true',
+    #                            help='Create a zip file for all output')
+
+    """
+    Information parser.
+    """
+    parser_info = subparsers.add_parser('info', help='Show db information')
+    parser_info.add_argument('--tables', dest='show_obs_tables',
+                             action='store_true',
+                             help='Show observation tables in a database')
+    parser_info.add_argument('--events', dest='show_events',
+                             action='store_true',
+                             help='Show events tables in a database')
+
+    """
+    Edit parser.
+    """
+    parser_edit = subparsers.add_parser('edit', help='Update db information')
+
+    parser.add_argument('database', type=str, help='Database to act on')
+
+    args = parser.parse_args()
+    logging.info(args)
+    try:
+        rxcadre_main(args)
+    except RxCadreError as e:
+        print(e)
+        sys.exit(1)
+    sys.exit(0)
+
 

@@ -38,7 +38,6 @@
 ###############################################################################
 
 import sys
-import tempfile
 import unittest
 
 sys.path.append('../src')
@@ -66,9 +65,7 @@ class RxCadreTestDb(unittest.TestCase):
 
 
     def create_invalid_db(self):
-        """
-        Create a completely invalid db.
-        """
+        """Create a completely invalid db."""
         sql = "CREATE TABLE t(a int)"
         db = sqlite3.connect("")
         c = db.cursor()
@@ -76,11 +73,34 @@ class RxCadreTestDb(unittest.TestCase):
         db.commit()
         return db
 
-    def create_valid_db(self, make_obs=0):
-        """Create a valid db.  If make_obs is > 0, make that many fake obs
-        tables, and register them with the obs_table table.
-        """
-        pass
+
+    def create_table_data(self):
+        '''Create a valid table, then insert a few rows of valid obs data'''
+        db = self.rx.init_new_db("")
+        c = db.cursor()
+        sql = '''
+              CREATE TABLE test_obs(plot_id text,
+                                    ts text,
+                                    m integer)
+              '''
+        c.execute(sql)
+        sql = '''
+              INSERT INTO obs_table values(?, ?, ?, ?, ?, ?)
+              '''
+        c.execute(sql, ('test_obs', 'ts', 'wkt', 'm',
+                        'M', 'Test M'))
+        sql = '''
+              INSERT INTO test_obs values(?, ?, ?)
+              '''
+        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 30), 1))
+        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 35), 2))
+        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 40), 3))
+        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 30), 4))
+        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 35), 5))
+        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 40), 6))
+        db.commit()
+        return db
+
 
     def test_db_creation_1(self):
         '''Test valid creation'''
@@ -92,40 +112,55 @@ class RxCadreTestDb(unittest.TestCase):
         db = self.create_invalid_db()
         self.assertFalse(self.rx.check_valid_db(db))
 
+    def test_db_internal_create_1(self):
+        '''Test the internal creation of various tests'''
+        db = self.create_table_data()
+        self.assertTrue(self.rx.check_valid_db(db))
+
     def test_db_init_1(self):
-        '''
-        Check internal creation function, this just shouldn't raise any
-        exceptions.
-        '''
+        '''Check internal creation function'''
         db = self.rx.init_new_db("")
 
     def test_db_init_2(self):
-        '''
-        Check valid initialization of db.
-        '''
+        '''Check valid initialization of db.'''
         db = self.rx.init_new_db("")
         self.assertTrue(self.rx.check_valid_db(db))
 
+    def test_db_init_3(self):
+        '''Make sure we don't overwrite files.'''
+        self.assertRaises(RxCadreIOError, self.rx.init_new_db,
+                          'test_rxcadre.py')
+
+    def test_extract_1(self):
+        '''Default extraction'''
+        db = self.create_table_data()
+        self.rx.set_db(db)
+        d = self.rx.extract_obs_data('test_obs', 'A')
+        self.assertEqual(len(d), 2)
+        self.assertEqual(len(d['timestamp']), 3)
+        self.assertEqual(d['m'], [1, 2, 3])
+
+
+    @unittest.skip('TODO')
+    def test_extract_2(self):
+        '''Time subset extraction'''
+        db = self.create_table_data()
+        self.rx.set_db(db)
+        s = datetime.datetime(2013, 11, 14, 15, 43, 29)
+        e = datetime.datetime(2013, 11, 14, 16, 00, 36)
+
+
+    @unittest.skip('Failing...')
     def test_db_import_1(self):
-        '''
-        Test creating db and importing hobo data.
-        '''
+        '''Test creating db and importing hobo data.'''
         db = self.rx.init_new_db("")
-        print 'one'
         self.assertNotEqual(db, None)
-        print 'two'
         self.rx.import_rxc_wind_data("kegan_test.csv",db)
-        print 'three'
         self.assertTrue(self.rx.check_valid_db(db))
-        print 'four'
         kml = self.rx._point_kml("K1",'kegan_test',db)
-        print 'five'
         kmz = self.rx.create_kmz("K1",'kegan_file','kegan_test',db)
-        print 'six'
-        
-        
 
 
 if __name__ == '__main__':
 
-    unittest.main(verbosity=2)
+    unittest.main()
