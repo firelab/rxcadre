@@ -96,8 +96,7 @@ def _extract_xy(wkt):
         raise ValueError
     wkt = wkt[wkt.find('(')+1:wkt.find(')')].split()
     if len(wkt) != 2:
-        print len(wkt), wkt
-        raise ValueError
+        raise ValueError("Invalid wkt: %s" % wkt)
     wkt[0] = wkt[0].replace("\"","")
     #wkt[0] = _to_decdeg(wkt[0])
 
@@ -263,7 +262,6 @@ class RxCadre:
                 e = "Failed to create a valid database."
                 self.RxCadreIOError(e)
             else:
-                print "db created"
                 return db
 
 
@@ -316,7 +314,6 @@ class RxCadre:
         sql = """SELECT geometry FROM plot_location WHERE plot_id=?"""
         cursor.execute(sql, (plot,))
         row = cursor.fetchone()
-        #print "ROW: "  , row
         return _extract_xy(row[0])
 
 
@@ -453,7 +450,6 @@ class RxCadre:
             #Note to self: removed quality tab from this.  may want to keep it
             cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
             data = cursor.fetchall()
-            print data
             spd = [float(spd[2]) for spd in data]
             gust = [float(gust[4]) for gust in data]
             dir = [float(dir[3]) for dir in data]
@@ -511,9 +507,7 @@ class RxCadre:
                 plt.close()
             return filename
         else:
-            if __debug__:
-                print 'Unknown failure in bigbutte.create_image()'
-            return None
+            raise ValueError("Invalid data")
 
 
     def create_field_kmz(self, filename, table,start,end,db):
@@ -723,4 +717,11 @@ time, date, plotID, wind speed, wind direction and wind gust column
             db.commit()
             db.close()
             p = "Data imported successfully"
+
+
+def usage():
+    print('')
+
+if __name__ == "__main__":
+    pass
 
