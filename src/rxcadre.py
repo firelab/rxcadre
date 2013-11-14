@@ -69,23 +69,7 @@ from windrose import *
 class RxCadreIOError(Exception):pass
 class RxCadreInvalidDbError(Exception):pass
 
-#<<<<<<< HEAD
-#logging.basicConfig(level=logging.INFO)
-#=======
-
-def file_acc(filepath, mode):
-    ''' Check if a file exists and is accessible. '''
-    try:
-        f = open(filepath, mode)
-    except IOError as e:
-        return False
- 
-    return True
-#>>>>>>> First migration attempt
-
-
-
-    
+logging.basicConfig(level=logging.INFO)
 
 def _import_date(string):
     """
@@ -119,7 +103,7 @@ def _extract_xy(wkt):
 
     wkt[1] = wkt[1].replace("\"","")
     #wkt[1] = _to_decdeg(wkt[1])
-    
+
     return tuple([float(c) for c in wkt])
 
 
@@ -131,10 +115,6 @@ def _to_decdeg(d):
     d = d.split("'")
     s = float(d[-1])
     s = s / 60.0
-#<<<<<<< HEAD
-#=======
-    
-#>>>>>>> First migration attempt
     d, m = [float(f) for f in d[0].split('\xb0')]
     m += s
     m = m / 60.0
@@ -171,7 +151,7 @@ class RxCadre:
             return False
         return True
 
-    
+
     def event_time(self,name):
         if name[-3:] != '.db':
             name = name + '.db'
@@ -200,15 +180,13 @@ class RxCadre:
             project = self.proj_combo.GetLabel()
         return project
 
-        
 
     def change_tables(self,name):
         """"
         I change the values of the table to only those that are present in the
         selected database.
         """
-        
-        
+
         if name[-3:] != '.db':
             name = name + '.db'
         db = sqlite3.connect(name)
@@ -225,7 +203,7 @@ class RxCadre:
             cursor.execute(sql)
             tables = cursor.fetchall()
             tables = [t[0] for t in tables]
-            
+
             return tables
 
     def change_picker(self,name, table):
@@ -234,7 +212,7 @@ class RxCadre:
         actually in the selected table, be it from imported data or stored
         in the database.
         """
-        
+
         if name[-3:] != '.db':
             name = name + '.db'
         db = sqlite3.connect(name)
@@ -250,9 +228,6 @@ class RxCadre:
                 plots_new.append(plots[i])
         return plots_new
 
-        
-
-        
 
     def init_new_db(self, filename):
         """
@@ -308,7 +283,7 @@ class RxCadre:
             e += ",".join(required_tables.difference(table_names))
             return False
         cursor.execute("select obs_table_name from obs_table")
-        
+
         obs_names = [o[0] for o in cursor.fetchall()]
         for name in obs_names:
             if name not in table_names:
@@ -322,7 +297,7 @@ class RxCadre:
             name = name+'.db'
         db = sqlite3.connect(name)
         cursor = db.cursor()
-        
+
         sql = "SELECT event_name FROM event"
         cursor.execute(sql)
         events = [c[0] for c in cursor.fetchall()]
@@ -331,8 +306,6 @@ class RxCadre:
         cursor.execute(sql)
         projects = [c[0] for c in cursor.fetchall()]
         return events, projects
-
-
 
 
     def point_location(self, plot, db):
@@ -351,7 +324,7 @@ class RxCadre:
         """
         Fetch data for a single point
         """
-        
+
         cursor = db.cursor()
         sql = """SELECT * FROM """+table+"""
                           WHERE plot_id_table=? AND timestamp BETWEEN ? 
@@ -364,7 +337,7 @@ class RxCadre:
         if (results == []):
             e = 'The timeframe selected contains no data for this table.'
             raise RxCadreIOError(e)
-        
+
         logging.info('Query fetched %i result(s)' % len(data))
         return data
 
@@ -375,11 +348,11 @@ class RxCadre:
         """Made it so this function can pull data from db or file"""
         if type(data) == str:
             cursor = db.cursor()
-            
+
             sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data
             cursor.execute(sql)
             data = cursor.fetchall()
-            
+
             spd = [float(spd[2]) for spd in data]
             gust = [float(gust[4]) for gust in data]
             dir = [float(dir[3]) for dir in data]
@@ -396,6 +369,7 @@ class RxCadre:
         direction_mean = stats.morestats.circmean(samples, 360, 0)
         direction_stddev = stats.morestats.circstd(samples, 360, 0)
         return (spd_mean, spd_stddev), (gust_max), (direction_mean, direction_stddev)
+
 
     def _point_kml(self, plot, data, db, images=[]):
         """
@@ -462,7 +436,6 @@ class RxCadre:
         return kml
 
 
-
     def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
         """
         Create a time series image for the plot over the time span
@@ -485,8 +458,7 @@ class RxCadre:
             gust = [float(gust[4]) for gust in data]
             dir = [float(dir[3]) for dir in data]
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
-       
-        
+
         #fig = plt.figure(figsize=(8,8), dpi=80)
         fig = plt.figure()
         ax1 = fig.add_subplot(211)
@@ -509,6 +481,7 @@ class RxCadre:
             plt.close()
         return filename
 
+
     def create_windrose(self, data, filename,db):
         """
         Create a windrose from a dataset.
@@ -516,7 +489,7 @@ class RxCadre:
         spd = [float(spd[2]) for spd in data]
         gust = [float(gust[4]) for gust in data]
         dir = [float(dir[3]) for dir in data]
-        
+
         time = [mdates.date2num(datetime.datetime.strptime(d[1],
                 '%Y-%m-%d %H:%M:%S')) for d in data]
 
@@ -541,6 +514,7 @@ class RxCadre:
             if __debug__:
                 print 'Unknown failure in bigbutte.create_image()'
             return None
+
 
     def create_field_kmz(self, filename, table,start,end,db):
         """
@@ -596,9 +570,6 @@ class RxCadre:
         return filename
 
 
-
-    
-
     def create_kmz(self, plot, filename,table,start,end,db):
         """
         Write a kmz with a time series and wind rose.  The stats are included
@@ -645,15 +616,14 @@ class RxCadre:
             d = d.replace("'","")
             d = d.replace("(","")
             d = d.replace(")","")
-            
+
             file.write(d+ "\n")
         #file.write(data)
         file.close()
-            
 
 
     def import_data(self,input_csv,db):
-        
+
         """Create a table from a selected file in the current database.
         Import the appropriate columns and populate with associated data."""
         name = db
@@ -732,12 +702,12 @@ time, date, plotID, wind speed, wind direction and wind gust column
                         end = line[time]
                     if line[plotid] not in plot_id:
                         plot_id.append(line[plotid])
-          
+
                 instr_id = line[instrid]
                 if (instr_id != instr_id2):
                     plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
                     cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
-                    
+
                 instr_id2 = line[instrid]
                 line = data_file.readline()
                 line = line.split(",")
@@ -747,28 +717,10 @@ time, date, plotID, wind speed, wind direction and wind gust column
             plots = cursor.fetchall()
             plots_hold = []
 
-            #update plotIDs
-
-            #update tables
-
-
             obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "plot_id,time,speed,dir,gust","PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
             cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?,?)",obs_vals)
 
-            #msg_import
-               
             db.commit()
             db.close()
             p = "Data imported successfully"
-
-
-
-        
-
-    
-
-    
-
-    
-       
 
