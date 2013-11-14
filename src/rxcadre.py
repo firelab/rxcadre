@@ -171,12 +171,6 @@ class RxCadre:
             return False
         return True
 
-    def get_time(self,event):
-        begin = self.start_month.GetLabel()+"/"+self.start_day.GetLabel()+"/"+self.start_year.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
-        stop = self.end_month.GetLabel()+"/"+self.end_day.GetLabel()+"/"+self.end_year.GetLabel()+" "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
-        begin = str(begin)
-        stop = str(stop)
-        return begin, stop
     
     def event_time(self,name):
         if name[-3:] != '.db':
@@ -206,19 +200,6 @@ class RxCadre:
             project = self.proj_combo.GetLabel()
         return project
 
-    def display_rose(self, plot, png):
-        self.bmp = wx.Image(plot+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
-        self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
-        self.plot_time.Refresh()
-        os.remove(plot +'_time.png')
-
-    def display_time(self, plot, png):
-        self.bmp2 = wx.Image(plot+'_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
-        self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
-        self.plot_rose.Refresh()
-        os.remove(plot +'_rose.png')
         
 
     def change_tables(self,name):
@@ -647,7 +628,7 @@ class RxCadre:
         #os.remove(pngfile)
         #os.remove(rosefile)
         return filename
-    #New Stuff End
+
 
     def create_csv(self, plot, filename,table,start,end,db):
         if filename == '':
