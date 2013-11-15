@@ -40,7 +40,7 @@
 import sys
 import unittest
 
-sys.path.append('../src')
+sys.path.append('../rxcadre')
 
 from rxcadre import *
 
