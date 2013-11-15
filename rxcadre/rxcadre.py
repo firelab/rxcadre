@@ -806,8 +806,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
 
                 instr_id = line[instrid]
                 if (instr_id != instr_id2):
-                    plot_vals = line[plotid],"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
-                    cursor.execute("INSERT INTO plot_location VALUES (?,?,?)",plot_vals)
+                    plot_vals = line[plotid],str(_to_decdeg(line[lon].replace("\"",""))), str(_to_decdeg(line[lat].replace("\"",""))),"POINT("+str(_to_decdeg(line[lon].replace("\"","")))+" "+str(_to_decdeg(line[lat].replace("\"","")))+")",line[tagid]
+                    cursor.execute("INSERT INTO plot_location VALUES (?,?,?,?,?)",plot_vals)
 
                 instr_id2 = line[instrid]
                 line = data_file.readline()
@@ -818,8 +818,8 @@ time, date, plotID, wind speed, wind direction and wind gust column
             plots = cursor.fetchall()
             plots_hold = []
 
-            obs_vals =  hold_name, "wkt_geometry", "id,time,speed,dir,gust", "plot_id,time,speed,dir,gust","PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust" 
-            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?,?)",obs_vals)
+            obs_vals =  hold_name,"PlotID, Timestamp,Wind Speed,Wind Direction(from North),Wind Gust",header[time], "wkd_geometry", "id,time,speed,dir,gust", "plot_id,time,speed,dir,gust" 
+            cursor.execute("INSERT INTO obs_table VALUES (?,?,?,?,?,?)",obs_vals)
 
             db.commit()
             db.close()
