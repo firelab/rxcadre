@@ -222,6 +222,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 else:
                     kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,db)
                     RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,db)
+                    RxCadre().create_field_kmz(os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,self.m_choice17.GetLabel(),os.path.abspath(""),db)
 
                     self.bmp = wx.Image(self.m_choice17.GetLabel()+'_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                     self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)

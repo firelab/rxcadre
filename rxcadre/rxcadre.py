@@ -103,6 +103,12 @@ def _extract_xy(wkt):
 
     return tuple([float(c) for c in wkt])
 
+def _export_date(dt):
+        """
+        Parse date time and return a string for query
+        """
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+
 
 def _to_decdeg(d):
     """
@@ -203,12 +209,6 @@ class RxCadre:
         begin = str(time[0])
         stop = str(time[1])
         return begin, stop
-
-    def _export_date(self,dt):
-        """
-        Parse date time and return a string for query
-        """
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
 
     def get_min_time(self,name, table):
         db = sqlite3.connect(name)
@@ -639,17 +639,17 @@ class RxCadre:
             raise ValueError("Invalid data")
 
 
-    def create_field_kmz(self, filename, table,start,end,db):
+    def create_field_kmz(self, filename, table,start,end,plotID,path,db):
         """
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
         """
         cursor = db.cursor()
-        sql = """SELECT DISTINCT(plot_id) FROM mean_flow_obs
-                   WHERE date_time BETWEEN ? AND ?"""
+        sql = """SELECT DISTINCT(plot_id_table) FROM """+table+"""
+                   WHERE timestamp BETWEEN ? AND ?"""
         cursor.execute(sql, (start, end))
 
-        kmz = zipfile.ZipFile( filename, 'w', 0, True)
+        kmz = zipfile.ZipFile( filename + '_field.kmz', 'w', 0, True)
         kmlfile = 'doc.kml'
         fout = open(kmlfile, 'w')
         fout.write('<Document>\n')
@@ -667,15 +667,15 @@ class RxCadre:
             if not data:
                 continue
             try:
-                pngfile = self.create_time_series_image(data, plot, db, plot + '_time.png')
-                rosefile = self.create_windrose(data, plot + '_rose.png',db)
+                pngfile = os.path.join(path,plotID + '_time.png')
+                rosefile = os.path.join(path,plotID + '_rose.png')
                 kml = self._point_kml(plot, data, db,[pngfile,rosefile])
             except Exception as e:
                 logging.warning('Unknown exception has occurred')
-                if os.path.exists(pngfile):
-                    os.remove(pngfile)
-                if os.path.exists(rosefile):
-                    os.remove(rosefile)
+                #if os.path.exists(pngfile):
+                #    os.remove(pngfile)
+                #if os.path.exists(rosefile):
+                #    os.remove(rosefile)
                 continue
 
             fout.write(kml)
@@ -683,8 +683,6 @@ class RxCadre:
 
             kmz.write(pngfile)
             kmz.write(rosefile)
-            os.remove(pngfile)
-            os.remove(rosefile)
         fout.write('</Document>\n')
         fout.close()
         kmz.write(kmlfile)
