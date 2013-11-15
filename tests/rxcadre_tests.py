@@ -129,7 +129,7 @@ class RxCadreTestDb(unittest.TestCase):
     def test_db_init_3(self):
         '''Make sure we don't overwrite files.'''
         self.assertRaises(RxCadreIOError, self.rx.init_new_db,
-                          'test_rxcadre.py')
+                          'rxcadre_tests.py')
 
     def test_extract_1(self):
         '''Default extraction'''
