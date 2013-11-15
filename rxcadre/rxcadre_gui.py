@@ -59,8 +59,37 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         for p in projects2:
             self.proj_combo.Append(p)
 
+    def set_time(self,min,max):
+        min = min.split(" ")
+        max = max.split(" ")
+
+        min_date = min[0].split("-")
+        max_date = max[0].split("-")
+
+        min_date = wx.DateTimeFromDMY(int(min_date[2]), int(min_date[1])+1, int(min_date[0]))
+        max_date = wx.DateTimeFromDMY(int(max_date[2]), int(max_date[1])+1, int(max_date[0]))
+                    
+        self.start_date.SetValue(min_date)
+        self.stop_date.SetValue(max_date)
+        min_time = min[1].split(":")
+        max_time = max[1].split(":")
+        self.start_hour.SetSelection(int(min_time[0])%12 - 1)
+        self.start_minute.SetSelection(int(min_time[1]))
+        self.start_second.SetSelection(int(min_time[2]))
+        if (int(min_time[0]) >  12):
+            self.start_ampm.SetSelection(1)
+        else:
+            self.start_ampm.SetSelection(0)
+        self.end_hour.SetSelection(int(max_time[0])%12 - 1)
+        self.end_minute.SetSelection(int(max_time[1]) )
+        self.end_second.SetSelection(int(max_time[2]))
+        if (int(max_time[0]) >  12):
+            self.end_ampm.SetSelection(1)
+        else:
+            self.end_ampm.SetSelection(0)
+
     def open_msg(self,event):
-        #can't use os.path.dirname(self.db) here because it hasn't been declared yet
+    
         file_path = os.path.abspath("")
         
         dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
@@ -101,6 +130,9 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         self.m_choice17.Clear()
         for p in plots_new:
             self.m_choice17.Append(p)
+        min = RxCadre().get_min_time(name,table)
+        max = RxCadre().get_max_time(name,table)
+        self.set_time(min,max)
 
     def import_data2(self,event):
         name = self.db
@@ -129,6 +161,11 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.change_tables()
                     dialog = wx.MessageDialog(None,os.path.basename(filename) + ' has been successfuly imported to the current database', 'Data imported successfully',wx.OK | wx.ICON_INFORMATION)
                     dialog.ShowModal()
+                    basename = os.path.basename(filename)
+                    min = RxCadre().get_min_time(name,basename[:basename.index(".")])
+                    max = RxCadre().get_max_time(name,basename[:basename.index(".")])
+
+                    self.set_time(min,max)
 
     def create_all(self,event):
         if (self.db_picker.GetLabel() == ""):
@@ -199,9 +236,9 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.plot_time.Refresh()
                     self.plot_rose.Refresh()
 
-                    os.remove(self.m_choice17.GetLabel()+'_time.png')
-                    os.remove(self.m_choice17.GetLabel()+'_rose.png')
-
+                    os.remove(os.path.join(os.path.abspath(""), self.m_choice17.GetLabel()+'_time.png'))
+                    os.remove(os.path.join(os.path.abspath(""), self.m_choice17.GetLabel()+'_rose.png'))
+                    
                     sql = "SELECT event_name FROM event"
                     cursor.execute(sql)
                     events = cursor.fetchall()

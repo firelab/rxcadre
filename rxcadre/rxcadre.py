@@ -80,11 +80,7 @@ def _import_date(string):
     dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
     return dt
 
-def _export_date(dt):
-    """
-    Parse date time and return a string for query
-    """
-    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
 
 
 def _extract_xy(wkt):
@@ -207,6 +203,32 @@ class RxCadre:
         begin = str(time[0])
         stop = str(time[1])
         return begin, stop
+
+    def _export_date(self,dt):
+        """
+        Parse date time and return a string for query
+        """
+        return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    def get_min_time(self,name, table):
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        sql = "SELECT MIN(timestamp) FROM "+table
+        cursor.execute(sql)
+        min_time = [t[0] for t in cursor.fetchall()]
+        min_time = str(min_time[0])
+        min_time = min_time.replace("'","")
+        return min_time
+    
+    def get_max_time(self,name,table):
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        sql = "SELECT MAX(timestamp) FROM "+table
+        cursor.execute(sql)
+        max_time = [t[0] for t in cursor.fetchall()]
+        max_time = str(max_time[0])
+        max_time = max_time.replace("'","")
+        return max_time
 
 
     def change_tables(self,name):
