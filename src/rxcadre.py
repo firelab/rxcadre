@@ -269,7 +269,7 @@ class RxCadre:
         if not db:
             raise RxCadreIOError("Could not create database")
         cursor = db.cursor()
-        sql = """CREATE TABLE plot_location(plot_id TEXT, 
+        sql = """CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
                                             geometry TEXT, plot_type TEXT)"""
         cursor.execute(sql)
         sql = """CREATE TABLE event(project_name TEXT,
@@ -279,11 +279,13 @@ class RxCadre:
                                     PRIMARY KEY(project_name, event_name))"""
         cursor.execute(sql)
         sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+                                        table_display name TEXT,
                                         timestamp_column TEXT NOT NULL,
                                         geometry_column TEXT NOT NULL,
                                         obs_cols TEXT NOT NULL,
-                                        obs_col_names TEXT,
-                                        obs_disp_names TEXT)"""
+                                        obs_col_names TEXT)
+              """
+
         cursor.execute(sql)
         db.commit()
         #update tables, update events, set db_picker to filename
