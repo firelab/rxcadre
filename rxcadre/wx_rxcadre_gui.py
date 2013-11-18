@@ -141,6 +141,21 @@ class GUI_test2 ( wx.Frame ):
 		
 		self.file_name = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		bSizer12.Add( self.file_name, 0, wx.ALL, 5 )
+
+		self.m_checkBox5 = wx.CheckBox( self, wx.ID_ANY, u"Create kmz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12.Add( self.m_checkBox5, 0, wx.ALL, 5 )
+		
+		self.m_checkBox6 = wx.CheckBox( self, wx.ID_ANY, u"Create field kmz", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12.Add( self.m_checkBox6, 0, wx.ALL, 5 )
+		
+		self.m_checkBox7 = wx.CheckBox( self, wx.ID_ANY, u"Create csv", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12.Add( self.m_checkBox7, 0, wx.ALL, 5 )
+		
+		self.m_checkBox8 = wx.CheckBox( self, wx.ID_ANY, u"Create GIS", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12.Add( self.m_checkBox8, 0, wx.ALL, 5 )
+
+		self.m_checkBox9 = wx.CheckBox( self, wx.ID_ANY, u"Create plot images", wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer12.Add( self.m_checkBox9, 0, wx.ALL, 5 )
 		
 		bSizer6.Add( bSizer12, 0, wx.ALIGN_CENTER_HORIZONTAL, 5 )
 		

@@ -57,11 +57,14 @@ import sys
 import unittest
 import zipfile
 
+import math
 import numpy as np
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import wx
+import ogr
+import osr
 
 sys.path.append(os.path.abspath('windrose'))
 from windrose import *
@@ -607,16 +610,28 @@ class RxCadre:
         return filename
 
 
-    def create_windrose(self, data, filename,db):
+    def create_windrose(self, data, plt_title,start,end,filename,db):
         """
         Create a windrose from a dataset.
         """
-        spd = [float(spd[2]) for spd in data]
-        gust = [float(gust[4]) for gust in data]
-        dir = [float(dir[3]) for dir in data]
 
-        time = [mdates.date2num(datetime.datetime.strptime(d[1],
-                '%Y-%m-%d %H:%M:%S')) for d in data]
+        if type(data) == list:
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
+        if type(data) == str:
+            cursor = db.cursor()
+            sql = """SELECT * FROM """+data+"""
+                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
+                           AND ?"""
+            #Note to self: removed quality tab from this.  may want to keep it
+            cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
+            data = cursor.fetchall()
+            spd = [float(spd[2]) for spd in data]
+            gust = [float(gust[4]) for gust in data]
+            dir = [float(dir[3]) for dir in data]
+            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
 
         if len(data) >= 1:
             #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
@@ -637,6 +652,116 @@ class RxCadre:
             return filename
         else:
             raise ValueError("Invalid data")
+
+    def create_ogr(self,path,table,filename,start,end,db):
+        """
+        Creates a terrifying Ogre with a CR of 50, 2500 hp, 4d20 + 32 crushing
+        damage in an AoE of 15 yds and a basic move of 160.  Suggested loot for
+        dispatching the beast: 2500 gold pieces, 1d6 Ogre's Toes, Sword of Greater Banish Evil
+        the remains of Sir Galdrich and the gratitude of King Balther, Lord of Castle Grazen.
+        """
+        
+        cursor = db.cursor()
+        sql = """SELECT DISTINCT(plot_id_table) FROM """+table+"""
+                   WHERE timestamp BETWEEN ? AND ?"""
+        cursor.execute(sql, (start, end))
+        plots = [c[0] for c in cursor.fetchall()]
+
+        
+        user_frmt = 'ESRI Shapefile'
+        driver = ogr.GetDriverByName(user_frmt)
+        os.chdir(path) 
+        # create a new data source and layer
+        if os.path.exists(filename + '.shp'):
+            driver.DeleteDataSource(filename +'.shp') 
+        ds = driver.CreateDataSource(filename +'.shp')
+        if ds is None:
+            print 'Could not create file'
+            sys.exit(1)
+        layer = ds.CreateLayer(filename, geom_type=ogr.wkbPoint)
+        featureDefn = layer.GetLayerDefn() 
+            
+        #FIELDS:
+        fieldDefn = ogr.FieldDefn('Plot ID', ogr.OFTString)
+        fieldDefn.SetWidth(50)
+        layer.CreateField(fieldDefn)
+            
+        fieldDefn2 = ogr.FieldDefn('Speed Mean', ogr.OFTString)
+        fieldDefn2.SetWidth(50)
+        layer.CreateField(fieldDefn2)
+            
+        fieldDefn3 = ogr.FieldDefn('Spd Stdev', ogr.OFTString)
+        fieldDefn3.SetWidth(50)
+        layer.CreateField(fieldDefn3)
+
+        fieldDefn4 = ogr.FieldDefn('Gust Max', ogr.OFTString)
+        fieldDefn4.SetWidth(50)
+        layer.CreateField(fieldDefn4)
+
+        fieldDefn5 = ogr.FieldDefn('Dir Mean', ogr.OFTString)
+        fieldDefn5.SetWidth(50)
+        layer.CreateField(fieldDefn5)
+
+        fieldDefn6 = ogr.FieldDefn('Dir Stdev', ogr.OFTString)
+        fieldDefn6.SetWidth(50)
+        layer.CreateField(fieldDefn6)
+
+        for plot in plots:
+            plot = str(plot)
+            sql  = """SELECT x,y FROM plot_location WHERE plot_id = '"""+plot+"""'"""
+
+            cursor.execute(sql)
+            loc = cursor.fetchall()
+ 
+            loc = loc[0]
+            print loc
+
+            (spd_mean, spd_stddev), gust_max, (direction_mean, direction_stddev) = self.statistics(table,db)
+   
+            # create a new point object
+            point = ogr.Geometry(ogr.wkbPoint)
+            point.AddPoint(loc[0],loc[1])
+            
+            
+
+            #NOW OUR FEATURE PRESENTATION:
+            feature = ogr.Feature(featureDefn)
+            feature.SetGeometry(point)
+            feature.SetField('Plot ID', plot)
+            feature.SetField('Speed Mean', str(spd_mean))
+            feature.SetField('Spd Stdev', str(spd_stddev))
+            feature.SetField('Gust Max', str(gust_max))
+            feature.SetField('Dir Mean', str(direction_mean))
+            feature.SetField('Dir Stdev',str(direction_stddev))
+            
+          
+            # add the feature to the output layer
+            layer.CreateFeature(feature)
+            
+            #small destroy
+            point.Destroy()
+            feature.Destroy()
+            
+        spatialRef = osr.SpatialReference()
+        spatialRef.ImportFromEPSG(32612)
+        layer.SetSpatialRef(spatialRef)
+        #create ESRI .prj file
+        targetSR = layer.GetSpatialRef()
+        targetSR.MorphToESRI()
+        file = open(filename +'.prj', 'w')
+        #file.write(targetSR.ExportToWkt())
+        file.write('testing')
+
+
+        #DESTROY!
+        file.close()
+        ds.Destroy()
+
+    def lat2y(self,a):
+        return 180.0/math.pi*math.log(math.tan(math.pi/4.0+a*(math.pi/180.0)/2.0))
+
+    def y2lat(a):
+        return 180.0/math.pi*(2.0*math.atan(math.exp(a*math.pi/180.0))-math.pi/2.0)
 
 
     def create_field_kmz(self, filename, table,start,end,plotID,path,db):
@@ -662,7 +787,7 @@ class RxCadre:
                 filename = plot
             if filename[-4:] != '.kmz':
                 filename = filename + '.kmz'
-            #need to specify table to fetch point from
+            
             data = self.fetch_point_data(plot,table,start,end,db)
             if not data:
                 continue
@@ -691,7 +816,7 @@ class RxCadre:
         return filename
 
 
-    def create_kmz(self, plot, filename,table,start,end,db):
+    def create_kmz(self, plot, filename,table,start,end,pngfile,rosefile,data,db):
         """
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
@@ -701,9 +826,7 @@ class RxCadre:
         if filename[-4:] != '.kmz':
             filename = filename + '.kmz'
 
-        data = self.fetch_point_data(plot,table,start,end,db)
-        pngfile = self.create_time_series_image(data, plot, start,end,db, plot + '_time.png')
-        rosefile = self.create_windrose(data, plot + '_rose.png',db)
+        #data = self.fetch_point_data(plot,table,start,end,db)
         kml = self._point_kml(plot, data, db,[pngfile,rosefile])
 
         kmlfile = 'doc.kml'
@@ -722,13 +845,13 @@ class RxCadre:
         return filename
 
 
-    def create_csv(self, plot, filename,table,start,end,db):
+    def create_csv(self, plot, filename,table,start,end,data,db):
         if filename == '':
             filename = plot
         if filename[-4:] != '.csv':
             filename = filename + '.csv'
 
-        data = self.fetch_point_data(plot,table,start,end,db)
+        #data = self.fetch_point_data(plot,table,start,end,db)
         file = open(filename,"w+")
         file.write('PlotID,Date\\Time, Speed, Direction, Gust' + '\n')
         for d in data:
