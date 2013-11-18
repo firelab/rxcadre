@@ -742,15 +742,15 @@ class RxCadre:
             point.Destroy()
             feature.Destroy()
             
-        spatialRef = osr.SpatialReference()
-        spatialRef.ImportFromEPSG(32612)
-        layer.SetSpatialRef(spatialRef)
+        targetSR = osr.SpatialReference()
+        targetSR.ImportFromEPSG(32612)
+
         #create ESRI .prj file
-        targetSR = layer.GetSpatialRef()
+        
         targetSR.MorphToESRI()
         file = open(filename +'.prj', 'w')
-        #file.write(targetSR.ExportToWkt())
-        file.write('testing')
+        file.write(targetSR.ExportToWkt())
+        
 
 
         #DESTROY!
