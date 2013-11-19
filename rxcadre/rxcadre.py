@@ -80,7 +80,11 @@ def _import_date(string):
     """
     Parse a datetime from a UTC string
     """
-    dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
+    try:
+        dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
+    except ValueError:
+        dt = datetime.datetime.strptime(string, '%m/%d/%y %I:%M:%S %p')
+
     return dt
 
 
