@@ -406,15 +406,16 @@ class RxCadre:
         logging.info('Query fetched %i result(s)' % len(data))
         return data
 
-    def statistics(self, data,db):
+    def statistics(self, data,plot,db):
         """
         Calculate the stats for speed and direction data
         """
         """Made it so this function can pull data from db or file"""
         if type(data) == str:
             cursor = db.cursor()
-
-            sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data
+    
+            sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data+" WHERE plot_id_table = '"+plot+"'"
+       
             cursor.execute(sql)
             data = cursor.fetchall()
 
@@ -443,7 +444,7 @@ class RxCadre:
         #print images
 
         lon, lat = self.point_location(plot,db)
-        stats = self.statistics(data,db)
+        stats = self.statistics(data,plot,db)
         if stats is None:
             logging.warning('Could not calculate stats')
             return ''
@@ -657,7 +658,7 @@ class RxCadre:
         """
         Creates a terrifying Ogre with a CR of 50, 2500 hp, 4d20 + 32 crushing
         damage in an AoE of 15 yds and a basic move of 160.  Suggested loot for
-        dispatching the beast: 2500 gold pieces, 1d6 Ogre's Toes, Sword of Greater Banish Evil
+        dispatching the beast: 2500 gold pieces, 1d6 Ogre's Toes, Sword of Greater Banish Evil,
         the remains of Sir Galdrich and the gratitude of King Balther, Lord of Castle Grazen.
         """
         
@@ -678,10 +679,17 @@ class RxCadre:
         if ds is None:
             print 'Could not create file'
             sys.exit(1)
-        layer = ds.CreateLayer(filename, geom_type=ogr.wkbPoint)
-        featureDefn = layer.GetLayerDefn() 
+        SR = osr.SpatialReference()
+        SR.ImportFromEPSG(4326)
+        SR.ExportToPrettyWkt()
+        layer = ds.CreateLayer(filename,SR, geom_type=ogr.wkbPoint)
+        featureDefn = layer.GetLayerDefn()
+
             
         #FIELDS:
+        SR = osr.SpatialReference()
+        SR.ImportFromEPSG(4326)
+        
         fieldDefn = ogr.FieldDefn('Plot ID', ogr.OFTString)
         fieldDefn.SetWidth(50)
         layer.CreateField(fieldDefn)
@@ -716,12 +724,11 @@ class RxCadre:
             loc = loc[0]
             print loc
 
-            (spd_mean, spd_stddev), gust_max, (direction_mean, direction_stddev) = self.statistics(table,db)
+            (spd_mean, spd_stddev), gust_max, (direction_mean, direction_stddev) = self.statistics(table,plot,db)
    
             # create a new point object
             point = ogr.Geometry(ogr.wkbPoint)
             point.AddPoint(loc[0],loc[1])
-            
             
 
             #NOW OUR FEATURE PRESENTATION:
@@ -741,20 +748,11 @@ class RxCadre:
             #small destroy
             point.Destroy()
             feature.Destroy()
-            
-        targetSR = osr.SpatialReference()
-        targetSR.ImportFromEPSG(32612)
-
-        #create ESRI .prj file
         
-        targetSR.MorphToESRI()
-        file = open(filename +'.prj', 'w')
-        file.write(targetSR.ExportToWkt())
         
 
 
         #DESTROY!
-        file.close()
         ds.Destroy()
 
     def lat2y(self,a):
