@@ -1051,6 +1051,9 @@ if __name__ == "__main__":
     parser_extract.add_argument('--timeseries', dest='timeseries',
                                 action='store_true',
                                 help='Create a timeseries file')
+    parser_extract.add_argument('--ogr', dest='ogr_frmt', type=str,
+                                default='ESRI Shapefile',
+                                help='Create an ogr dataset using this driver')
     parser_extract.add_argument('--show-only', dest='show-only',
                                 action='store_true',
                                 help='Show the images, don\'t write a file')
