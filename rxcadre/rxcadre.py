@@ -88,6 +88,10 @@ def _import_date(string):
     return dt
 
 
+def _check_extension(f, ext):
+    if ext[0] != '.':
+        ext = '.' + ext
+    return os.path.splitext(f) == ext
 
 
 def _extract_xy(wkt):
