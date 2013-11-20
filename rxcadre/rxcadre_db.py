@@ -346,6 +346,14 @@ class RxCadreDb():
         '''
         Read in the data for the hobo loggers.  We currently have this as a
         large single csv.
+
+        param volatile: turn of journaling in sqlite, much faster, but may lose
+                        data
+
+        param prog_func: optional progress call back in the form:
+                         prog_func(float) that takes a decimal fraction p
+                         where:
+                         0 =< p =< 1.0
         '''
 
         if volatile:
@@ -367,6 +375,10 @@ class RxCadreDb():
             line = line.split(',')
             plot = '-'.join(line[6:8])
             data = []
+            #
+            # FIXME: Currently, this plot has a bad timestamp in the giant
+            #        file, skip it for now, and load the data from L1G-A13.csv
+            #
             if plot == 'L1G-A13':
                 continue
             data.append(plot)
@@ -384,6 +396,9 @@ class RxCadreDb():
         self._dbase.commit()
         if volatile:
             self._cursor.execute('PRAGMA journal_mode=ON')
+
+        if prog_func:
+            prog_func(1.0)
 
 
     def import_fbp_data(self, xls_file):

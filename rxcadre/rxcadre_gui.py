@@ -176,8 +176,6 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.set_time(min,max)
 
     def create_all(self,event):
-        if (self.db_picker.GetLabel() == ""):
-            self.RxCadreIOError('Please Select a Database')
         fname = self.db
         name = fname
         req_ext = '.db'

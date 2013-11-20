@@ -70,7 +70,7 @@ from windrose import *
 ###############################################################################
 # Logging stuff.
 ###############################################################################
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 
 ###############################################################################
 # Generic module specific errors
@@ -588,8 +588,7 @@ class RxCadre:
         if not row:
             raise RxCadreInvalidDataError('Table %s is not in obs_table' %
                                           table_name)
-        time_col = row[1]
-        geom_col = row[2]
+        time_col = row[2]
         obs_cols = [c.strip() for c in row[3].split(',')]
         obs_names = [c.strip() for c in row[4].split(',')]
         # TODO: Check columns against supplied columns, not supported yet.
@@ -803,12 +802,6 @@ class RxCadre:
 
         #DESTROY!
         ds.Destroy()
-
-    def lat2y(self,a):
-        return 180.0/math.pi*math.log(math.tan(math.pi/4.0+a*(math.pi/180.0)/2.0))
-
-    def y2lat(a):
-        return 180.0/math.pi*(2.0*math.atan(math.exp(a*math.pi/180.0))-math.pi/2.0)
 
 
     def create_field_kmz(self, filename, table,start,end,plotID,path,db):
@@ -1046,8 +1039,9 @@ def rxcadre_main(args):
                 for p in plots:
                     print('    %s, %s' % (p[0], p[1]))
 
-        elif args.sub_cmd == 'graph':
-            pass
+        elif args.sub_cmd == 'export':
+            data = rx.extract_obs_data('cup_vane_obs', 'S8-A66')
+            print len(data['gust'])
 
 
 if __name__ == "__main__":
@@ -1063,7 +1057,6 @@ if __name__ == "__main__":
     rxcadre edit
     '''
 
-
     '''
     Main parser.  All commands take a database to act on, so that is the last
     argument for everything.
@@ -1078,7 +1071,6 @@ if __name__ == "__main__":
 
     '''
     Import csv parser with options for naming the table and columns.
-    '''
     parser_import = subparsers.add_parser('import', help='Import csv data')
     parser_import.add_argument('input_file', type=str,
                                help='csv file to import')
@@ -1088,6 +1080,7 @@ if __name__ == "__main__":
     parser_import.add_argument('--column_names', dest='column_names',
                                type=str, nargs='*', default=[],
                                help='Display column names')
+    '''
     '''
     Export parser.
     '''
@@ -1116,8 +1109,10 @@ if __name__ == "__main__":
     parser_extract.add_argument('--show-only', dest='show-only',
                                 action='store_true',
                                 help='Show the images, don\'t write a file')
+    parser_extract.add_argument('--path', type=str, default='.',
+                                help='Output file path')
     parser_extract.add_argument('--base-name', type=str, default='',
-                                help='Base filename for output')
+                                help='Base filename for output(prepend)')
     #parser_extract.add_argument('--zip', dest='zip', action='store_true',
     #                            help='Create a zip file for all output')
 
@@ -1137,8 +1132,8 @@ if __name__ == "__main__":
 
     '''
     Edit parser.
-    '''
     parser_edit = subparsers.add_parser('edit', help='Update db information')
+    '''
 
     parser.add_argument('database', type=str, help='Database to act on')
 
