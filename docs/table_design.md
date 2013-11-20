@@ -55,7 +55,7 @@ tables.
 
 PRIMARY\_KEY(plot\_id)
 
-### Observation tables (obs\_tables)
+### Observation tables (obs\_table)
 
 This table describes which values from which observation tables can be
 displayed.  All observation tables should be registered in this table.  The
@@ -70,7 +70,7 @@ human-readable strings for each column, comma separated.
 
 PRIMARY\_KEY(obs\_table\_name)
 
-### Event table
+### Event table (event)
 
 The event table holds pre-determined events for a given project.  The table
 specifies the start and end time for some event for subsetting temporally.
