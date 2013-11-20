@@ -44,6 +44,7 @@ sys.path.append('../rxcadre')
 
 from rxcadre import *
 
+from rxcadre_db import RxCadreDb
 
 def _create_table_data():
     '''Create a valid table, then insert a few rows of valid obs data'''
@@ -83,17 +84,17 @@ def _create_table_data():
     return db
 
 
-class RxCadreTestDb(unittest.TestCase):
-    """
+class RxCadreTestDbGeneral(unittest.TestCase):
+    '''
     Test database creation and integrity.
-    """
+    '''
     def setUp(self):
         self.rx = RxCadre()
 
     def create_table_db(self):
-        """
+        '''
         Create a valid db.
-        """
+        '''
         sql = open("../data/new_tables.sql").read().split(";")
         db = sqlite3.connect("")
         c = db.cursor()
@@ -104,7 +105,7 @@ class RxCadreTestDb(unittest.TestCase):
 
 
     def create_invalid_db(self):
-        """Create a completely invalid db."""
+        '''Create a completely invalid db.'''
         sql = "CREATE TABLE t(a int)"
         db = sqlite3.connect("")
         c = db.cursor()
@@ -204,6 +205,19 @@ class RxCadreTestDbInfo(unittest.TestCase):
         '''Check plot names'''
         d = self.rx.get_plot_data()
         self.assertEqual(d, [['A', 'POINT(1 2)'], ['B', 'POINT(3 4)']])
+
+
+class TestRxCadreDb(unittest.TestCase):
+    '''Test the RxCadreDb class'''
+
+    def setUp(self):
+        self.test_db = RxCadreDb("")
+
+
+    def test_init_db_valid_1(self):
+        '''Test valid creation'''
+        self.test_db._init_new_db()
+        self.assert_(self.test_db.check_valid_db())
 
 
 if __name__ == '__main__':

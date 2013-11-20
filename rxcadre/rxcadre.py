@@ -36,50 +36,56 @@
 #  For more information, please refer to <http://unlicense.org/>
 #
 ###############################################################################
-"""
+'''
 Module for importing spatial time-series data into a searchable format for 
 subsetting in space and time.  Typical import format would be csv files.  The
 values are imported into a sqlite3 database.  'Meta' tables store information
 about what to display.
-"""
+'''
 
-import csv
-import os
-import sqlite3
-import time
-import datetime
-
-from collections import namedtuple
+import argparse
 import datetime
 import logging
 import math
+import os
+import sqlite3
 import sys
-import unittest
+import time
 import zipfile
 
-import math
-import numpy as np
-import scipy.stats as stats
-import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-import wx
-import ogr
-import osr
+import matplotlib.pyplot as plt
+
+import numpy as np
+
+import scipy.stats as stats
+
+from osgeo import ogr
+from osgeo import osr
 
 sys.path.append(os.path.abspath('windrose'))
+
 from windrose import *
+
+###############################################################################
+# Logging stuff.
+###############################################################################
+logging.basicConfig(level=logging.INFO)
+
+###############################################################################
+# Generic module specific errors
+###############################################################################
 
 class RxCadreError(Exception):pass
 class RxCadreIOError(RxCadreError):pass
 class RxCadreInvalidDbError(RxCadreError):pass
 class RxCadreInvalidDataError(RxCadreError):pass
 
-logging.basicConfig(level=logging.INFO)
 
 def _import_date(string):
-    """
+    '''
     Parse a datetime from a UTC string
-    """
+    '''
     try:
         dt = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
     except ValueError:
@@ -95,10 +101,10 @@ def _check_extension(f, ext):
 
 
 def _extract_xy(wkt):
-    """
+    '''
     Extract x and y coordinates from wkt in the db.  Strip 'POINT' from the
     front, and split the remaining data losing the parentheses
-    """
+    '''
 
     wkt = wkt.strip().upper()
     if wkt.find('POINT') < 0:
@@ -115,16 +121,16 @@ def _extract_xy(wkt):
     return tuple([float(c) for c in wkt])
 
 def _export_date(dt):
-        """
-        Parse date time and return a string for query
-        """
-        return dt.strftime('%Y-%m-%d %H:%M:%S')
+    '''
+    Parse date time and return a string for query
+    '''
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
 def _to_decdeg(d):
-    """
+    '''
     Split a coordinate in degrees, decimal minutes to decimal degrees
-    """
+    '''
     logging.info('Converting %s to decimal degrees' % d)
     d = d.split("'")
     s = float(d[-1])
@@ -140,9 +146,9 @@ def _to_decdeg(d):
 
 
 class RxCadre:
-    """
+    '''
     Main interface for RX Cadre data.
-    """
+    '''
     def __init__(self, db_file=None, new=False):
         if db_file:
             self.db_file = db_file
@@ -166,9 +172,9 @@ class RxCadre:
 
 
     def __del__(self):
-        """
+        '''
         Cleanup, mainly close the db
-        """
+        '''
         if self.db:
             self.db.close()
 
@@ -183,9 +189,9 @@ class RxCadre:
             raise RxCadreInvalidDbError("Could not set new database")
 
     def check_db(self):
-        """
+        '''
         Simple check to make sure our internal db handle is good.
-        """
+        '''
         if self.db is None or self.cur is None:
             raise RxCadreInvalidDbError("Invalid database")
 
@@ -204,17 +210,17 @@ class RxCadre:
         for i in range(0,len(header)):
             header[i] = header[i].lower()
             if "time" in header[i]:
-                    time = i
+                time = i
             if "date" in header[i]:
-                    date = i
+                date = i
             if "plot" in header[i]:
-                    plotid = i
+                plotid = i
             if "speed" in header[i]:
-                    speed = i
+                speed = i
             if "direction" in header[i]:
-                    direc = i
+                direc = i
             if "gust" in header[i]:
-                    gust = i
+                gust = i
         if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
             return False
         return True
@@ -255,10 +261,10 @@ class RxCadre:
 
 
     def change_tables(self,name):
-        """"
+        '''"
         I change the values of the table to only those that are present in the
         selected database.
-        """
+        '''
 
         if name[-3:] != '.db':
             name = name + '.db'
@@ -279,57 +285,35 @@ class RxCadre:
 
             return tables
 
-    def change_picker(self,name, table):
-        """
-        I change the values in the plot_id_picker to only those that are
-        actually in the selected table, be it from imported data or stored
-        in the database.
-        """
-
-        if name[-3:] != '.db':
-            name = name + '.db'
-        db = sqlite3.connect(name)
-        cursor = db.cursor()
-        sql  = "SELECT plot_id_table FROM "+table
-        cursor.execute(sql)
-        plots = cursor.fetchall()
-        plots_new = []
-        plots = [p[0] for p in plots]
-        for i in range(0,len(plots)):
-            plots[i] = str(plots[i])
-            if plots[i] not in plots_new:
-                plots_new.append(plots[i])
-        return plots_new
-
 
     def init_new_db(self, filename):
-        """
+        '''
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
-        """
+        '''
         if(os.path.exists(filename)):
             raise RxCadreIOError("File exists.")
         db = sqlite3.connect(filename)
         if not db:
             raise RxCadreIOError("Could not create database")
         cursor = db.cursor()
-        sql = """CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
-                                            geometry TEXT, plot_type TEXT)"""
+        sql = '''CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
+                                            geometry TEXT, plot_type TEXT)'''
         cursor.execute(sql)
-        sql = """CREATE TABLE event(project_name TEXT,
+        sql = '''CREATE TABLE event(project_name TEXT,
                                     event_name TEXT NOT NULL,
                                     event_start TEXT NOT NULL,
                                     event_end TEXT NOT NULL,
-                                    PRIMARY KEY(project_name, event_name))"""
+                                    PRIMARY KEY(project_name, event_name))'''
         cursor.execute(sql)
-        sql = """CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+        sql = '''CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
                                         table_display name TEXT,
                                         timestamp_column TEXT NOT NULL,
                                         geometry_column TEXT NOT NULL,
                                         obs_cols TEXT NOT NULL,
                                         obs_col_names TEXT)
-              """
+              '''
 
         cursor.execute(sql)
         db.commit()
@@ -344,11 +328,11 @@ class RxCadre:
 
 
     def check_valid_db(self, db):
-        """
+        '''
         Check the schema of an existing db.  This involves checking the
         metatables, and checking to make sure tables registered in obs_tables
         exist.
-        """
+        '''
 
         cursor = db.cursor()
         required_tables = set(['plot_location', 'event', 'obs_table'])
@@ -384,9 +368,9 @@ class RxCadre:
         return events, projects
 
     def get_obs_table_names(self):
-        """
+        '''
         Get the names of all stored observation tables as a list of strings.
-        """
+        '''
         self.check_db()
         sql = "SELECT obs_table_name FROM obs_table"
         self.cur.execute(sql)
@@ -395,9 +379,9 @@ class RxCadre:
 
 
     def get_event_data(self):
-        """
+        '''
         Get the event names and the start, stop times for the events.
-        """
+        '''
         self.check_db()
         sql = "SELECT event_name, event_start, event_end from event"
         self.cur.execute(sql)
@@ -421,25 +405,25 @@ class RxCadre:
 
 
     def point_location(self, plot, db):
-        """
+        '''
         Fetch the x and y coordinate of the plot
-        """
+        '''
         cursor = db.cursor()
-        sql = """SELECT geometry FROM plot_location WHERE plot_id=?"""
+        sql = '''SELECT geometry FROM plot_location WHERE plot_id=?'''
         cursor.execute(sql, (plot,))
         row = cursor.fetchone()
         return _extract_xy(row[0])
 
 
     def fetch_point_data(self, plot, table,start, end,db):
-        """
+        '''
         Fetch data for a single point
-        """
+        '''
 
         cursor = db.cursor()
-        sql = """SELECT * FROM """+table+"""
+        sql = '''SELECT * FROM '''+table+'''
                           WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?"""
+                           AND ?'''
         #Note to self: removed quality tab from this.  may want to keep it
         cursor.execute(sql, (plot,_export_date(start),_export_date(end)))
         results = cursor.fetchall()
@@ -453,10 +437,10 @@ class RxCadre:
         return data
 
     def statistics(self, data,plot,db):
-        """
+        '''
         Calculate the stats for speed and direction data
-        """
-        """Made it so this function can pull data from db or file"""
+        '''
+        '''Made it so this function can pull data from db or file'''
         if type(data) == str:
             cursor = db.cursor()
     
@@ -484,9 +468,9 @@ class RxCadre:
 
 
     def _point_kml(self, plot, data, db, images=[]):
-        """
+        '''
         Create a kml representation of a plot
-        """
+        '''
         #print images
 
         lon, lat = self.point_location(plot,db)
@@ -613,9 +597,9 @@ class RxCadre:
         return data
 
     def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
-        """
+        '''
         Create a time series image for the plot over the time span
-        """
+        '''
         if type(data) == list:
             spd = [float(spd[2]) for spd in data]
             gust = [float(gust[4]) for gust in data]
@@ -623,9 +607,9 @@ class RxCadre:
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
         if type(data) == str:
             cursor = db.cursor()
-            sql = """SELECT * FROM """+data+"""
+            sql = '''SELECT * FROM '''+data+'''
                           WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?"""
+                           AND ?'''
             #Note to self: removed quality tab from this.  may want to keep it
             cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
             data = cursor.fetchall()
@@ -658,9 +642,9 @@ class RxCadre:
 
 
     def create_windrose(self, data, plt_title,start,end,filename,db):
-        """
+        '''
         Create a windrose from a dataset.
-        """
+        '''
 
         if type(data) == list:
             spd = [float(spd[2]) for spd in data]
@@ -669,9 +653,9 @@ class RxCadre:
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
         if type(data) == str:
             cursor = db.cursor()
-            sql = """SELECT * FROM """+data+"""
+            sql = '''SELECT * FROM '''+data+'''
                           WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?"""
+                           AND ?'''
             #Note to self: removed quality tab from this.  may want to keep it
             cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
             data = cursor.fetchall()
@@ -701,16 +685,16 @@ class RxCadre:
             raise ValueError("Invalid data")
 
     def create_ogr(self,path,table,filename,start,end,db):
-        """
+        '''
         Creates a terrifying Ogre with a CR of 50, 2500 hp, 4d20 + 32 crushing
         damage in an AoE of 15 yds and a basic move of 160.  Suggested loot for
         dispatching the beast: 2500 gold pieces, 1d6 Ogre's Toes, Sword of Greater Banish Evil,
         the remains of Sir Galdrich and the gratitude of King Balther, Lord of Castle Grazen.
-        """
+        '''
         
         cursor = db.cursor()
-        sql = """SELECT DISTINCT(plot_id_table) FROM """+table+"""
-                   WHERE timestamp BETWEEN ? AND ?"""
+        sql = '''SELECT DISTINCT(plot_id_table) FROM '''+table+'''
+                   WHERE timestamp BETWEEN ? AND ?'''
         cursor.execute(sql, (start, end))
         plots = [c[0] for c in cursor.fetchall()]
 
@@ -762,7 +746,7 @@ class RxCadre:
 
         for plot in plots:
             plot = str(plot)
-            sql  = """SELECT x,y FROM plot_location WHERE plot_id = '"""+plot+"""'"""
+            sql  = '''SELECT x,y FROM plot_location WHERE plot_id = ''''+plot+'''''''
 
             cursor.execute(sql)
             loc = cursor.fetchall()
@@ -809,13 +793,13 @@ class RxCadre:
 
 
     def create_field_kmz(self, filename, table,start,end,plotID,path,db):
-        """
+        '''
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
-        """
+        '''
         cursor = db.cursor()
-        sql = """SELECT DISTINCT(plot_id_table) FROM """+table+"""
-                   WHERE timestamp BETWEEN ? AND ?"""
+        sql = '''SELECT DISTINCT(plot_id_table) FROM '''+table+'''
+                   WHERE timestamp BETWEEN ? AND ?'''
         cursor.execute(sql, (start, end))
 
         kmz = zipfile.ZipFile( filename + '_field.kmz', 'w', 0, True)
@@ -861,10 +845,10 @@ class RxCadre:
 
 
     def create_kmz(self, plot, filename,table,start,end,pngfile,rosefile,data,db):
-        """
+        '''
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
-        """
+        '''
         if filename == '':
             filename = plot
         if filename[-4:] != '.kmz':
@@ -912,8 +896,8 @@ class RxCadre:
 
     def import_data(self,input_csv,db):
 
-        """Create a table from a selected file in the current database.
-        Import the appropriate columns and populate with associated data."""
+        '''Create a table from a selected file in the current database.
+        Import the appropriate columns and populate with associated data.'''
         name = db
         if name[-3:] != '.db':
             name = name + '.db'
@@ -937,37 +921,37 @@ class RxCadre:
         for i in range(0,len(header)):
             header[i] = header[i].lower()
             if "time" in header[i]:
-                    time = i
+                time = i
             if "date" in header[i]:
-                    date = i
+                date = i
             if ("plot" in header[i]) and ("id" in header[i]):
-                    plotid = i
+                plotid = i
             if "speed" in header[i]:
-                    speed = i
+                speed = i
             if "direction" in header[i]:
-                    direc = i
+                direc = i
             if "gust" in header[i]:
-                    gust = i
+                gust = i
             if ("tag" in header[i]) and ("id" in header[i]):
-                    tagid = i
+                tagid = i
             if "latitude" in header[i]:
-                    lat = i
+                lat = i
             if "longitude" in header[i]:
-                    lon = i
+                lon = i
             if ("instrument" in header[i]) and ("id" in header[i]):
-                    instrid = i
+                instrid = i
         if time == -1 or date == -1 or plotid == -1 or speed == -1 or direc == -1 or gust == -1:
-            e = """
+            e = '''
 The selected data does not include the necessary fields for analysis. 
 Please make sure that the selected data includes a separate
 time, date, plotID, wind speed, wind direction and wind gust column
-                                """
+                                '''
 
         else:
 
-            cursor.execute("CREATE TABLE "+hold_name+"""(plot_id_table TEXT,
+            cursor.execute("CREATE TABLE "+hold_name+'''(plot_id_table TEXT,
                                                         timestamp DATETIME, speed TEXT,
-                                                        direction TEXT, gust TEXT)""")
+                                                        direction TEXT, gust TEXT)''')
 
             n = 0
             line = data_file.readline()
@@ -1013,9 +997,9 @@ time, date, plotID, wind speed, wind direction and wind gust column
             p = "Data imported successfully"
 
 def rxcadre_main(args):
-    """
+    '''
     Run the command line stuff.
-    """
+    '''
     if args.sub_cmd == 'create':
         rx = RxCadre(args.database, new=True)
         rx.init_new_db(args.database)
@@ -1048,7 +1032,7 @@ def rxcadre_main(args):
 
 
 if __name__ == "__main__":
-    """
+    '''
     Command line interface for extracting data.  Users should be able to use
     the cli for extracting one or more plots for a given time period or event.
     Users should also be able to extract meta information from a db.  Editing
@@ -1058,25 +1042,24 @@ if __name__ == "__main__":
     rxcadre export
     rxcadre info
     rxcadre edit
-    """
+    '''
 
-    import argparse
 
-    """
+    '''
     Main parser.  All commands take a database to act on, so that is the last
     argument for everything.
-    """
+    '''
     parser = argparse.ArgumentParser(prog='rxcadre')
     subparsers = parser.add_subparsers(help='sub-command help', dest='sub_cmd')
 
-    """
+    '''
     Create a new database parser.  Only needs the database name.
-    """
+    '''
     parser_create = subparsers.add_parser('create', help='Create an empty db')
 
-    """
+    '''
     Import csv parser with options for naming the table and columns.
-    """
+    '''
     parser_import = subparsers.add_parser('import', help='Import csv data')
     parser_import.add_argument('input_file', type=str,
                                help='csv file to import')
@@ -1086,9 +1069,9 @@ if __name__ == "__main__":
     parser_import.add_argument('--column_names', dest='column_names',
                                type=str, nargs='*', default=[],
                                help='Display column names')
-    """
+    '''
     Export parser.
-    """
+    '''
     parser_extract = subparsers.add_parser('export', help='Extract plot data')
     parser_extract.add_argument('--plots', dest='plot', type=str,
                                 nargs='*', default=[],
@@ -1119,9 +1102,9 @@ if __name__ == "__main__":
     #parser_extract.add_argument('--zip', dest='zip', action='store_true',
     #                            help='Create a zip file for all output')
 
-    """
+    '''
     Information parser.
-    """
+    '''
     parser_info = subparsers.add_parser('info', help='Show db information')
     parser_info.add_argument('--tables', dest='show_obs_tables',
                              action='store_true',
@@ -1133,9 +1116,9 @@ if __name__ == "__main__":
                              action='store_true',
                              help='Show events tables in a database')
 
-    """
+    '''
     Edit parser.
-    """
+    '''
     parser_edit = subparsers.add_parser('edit', help='Update db information')
 
     parser.add_argument('database', type=str, help='Database to act on')
