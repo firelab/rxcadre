@@ -44,11 +44,9 @@ CREATE TABLE plot_location
 
 CREATE TABLE event
 (
-    project_name TEXT,
-    event_name TEXT NOT NULL,
+    event_name TEXT NOT NULL PRIMARY KEY,
     event_start TEXT NOT NULL,
-    event_end TEXT NOT NULL,
-    PRIMARY KEY(project_name, event_name)
+    event_end TEXT NOT NULL
 );
 
 CREATE TABLE obs_table
