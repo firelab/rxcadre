@@ -61,17 +61,10 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         for t in tables:
             if "plot_location" not in t and "event" not in t and "obs_table" not in t:
                 self.combo.Append(t)
-        events, projects = RxCadre().update_events(name)
-        self.proj_combo.Clear()
+        events = RxCadre().update_events(name)
         self.event_combo.Clear()
         for e in events:
             self.event_combo.Append(e)
-        projects2 = ['RxCadre']
-        for p in projects:
-            if p not in projects2:
-                projects2.append(p)
-        for p in projects2:
-            self.proj_combo.Append(p)
 
     def set_time(self,min,max):
         min = min.split(" ")
@@ -117,6 +110,7 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
                 self.RxCadreIOError('The selected database appears to be in the wrong format. Please make sure you selected a valid database.')
             else:
                 self.db_picker.SetLabel(os.path.split(name)[-1])
+                print name
                 self.db = name
                 self.change_tables()
                 dialog.Destroy()

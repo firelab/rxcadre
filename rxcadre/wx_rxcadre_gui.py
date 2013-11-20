@@ -22,14 +22,6 @@ class GUI_test2 ( wx.Frame ):
 		self.db_picker = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_READONLY )
 		bSizer8.Add( self.db_picker, 0, wx.ALL, 5 )
 		
-		self.m_staticText111 = wx.StaticText( self, wx.ID_ANY, u"Current Project:", wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_staticText111.Wrap( -1 )
-		bSizer8.Add( self.m_staticText111, 0, wx.ALL, 5 )
-		
-		proj_comboChoices = []
-		self.proj_combo = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, proj_comboChoices, 0 )
-		bSizer8.Add( self.proj_combo, 0, wx.ALL, 5 )
-		
 		self.m_staticText9 = wx.StaticText( self, wx.ID_ANY, u"Select Table:", wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_staticText9.Wrap( -1 )
 		bSizer8.Add( self.m_staticText9, 0, wx.ALL, 5 )

@@ -239,7 +239,8 @@ class RxCadre:
         stop = str(time[1])
         return begin, stop
 
-    def get_min_time(self,name, table):
+    def get_min_time(self, name, table):
+        print name, table
         db = sqlite3.connect(name)
         cursor = db.cursor()
         sql = "SELECT MIN(timestamp) FROM "+table
@@ -285,6 +286,27 @@ class RxCadre:
 
             return tables
 
+    def change_picker(self,name, table):
+        """
+        I change the values in the plot_id_picker to only those that are
+        actually in the selected table, be it from imported data or stored
+        in the database.
+        """
+
+        if name[-3:] != '.db':
+            name = name + '.db'
+        db = sqlite3.connect(name)
+        cursor = db.cursor()
+        sql  = "SELECT plot_id FROM plot_location"
+        cursor.execute(sql)
+        plots = cursor.fetchall()
+        plots_new = []
+        plots = [p[0] for p in plots]
+        for i in range(0,len(plots)):
+            plots[i] = str(plots[i])
+            if plots[i] not in plots_new:
+                plots_new.append(plots[i])
+        return plots_new
 
     def init_new_db(self, filename):
         '''
@@ -362,10 +384,7 @@ class RxCadre:
         cursor.execute(sql)
         events = [c[0] for c in cursor.fetchall()]
 
-        sql = "SELECT project_name FROM event"
-        cursor.execute(sql)
-        projects = [c[0] for c in cursor.fetchall()]
-        return events, projects
+        return events
 
     def get_obs_table_names(self):
         '''

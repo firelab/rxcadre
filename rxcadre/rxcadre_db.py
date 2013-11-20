@@ -21,7 +21,7 @@
 #  software to the public domain. We make this dedication for the benefit
 #  of the public at large and to the detriment of our heirs and
 #  successors. We intend this dedication to be an overt act of
-#  relinquishment in perpetuity of all present and future rights to this
+#  relinquishment in perpetuity of all present and future rights to thise)
 #  software under copyright law.
 #
 #  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
@@ -39,6 +39,7 @@
 SQLite related class for storage of time series data
 '''
 
+import datetime
 import logging
 import sqlite3
 
@@ -46,6 +47,36 @@ import sqlite3
 # Logging stuff.
 ###############################################################################
 logging.basicConfig(level=logging.INFO)
+
+def _import_date(string):
+    '''
+    Parse a datetime from a UTC string
+    '''
+    try:
+        parsed = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
+    except ValueError:
+        parsed = datetime.datetime.strptime(string, '%m/%d/%y %I:%M:%S %p')
+    return parsed
+
+def _extract_xy(wkt):
+    '''
+    Extract x and y coordinates from wkt in the db.  Strip 'POINT' from the
+    front, and split the remaining data losing the parentheses
+    '''
+
+    wkt = wkt.strip().upper()
+    if wkt.find('POINT') < 0:
+        raise ValueError
+    wkt = wkt[wkt.find('(')+1:wkt.find(')')].split()
+    if len(wkt) != 2:
+        raise ValueError("Invalid wkt: %s" % wkt)
+    wkt[0] = wkt[0].replace("\"","")
+
+    wkt[1] = wkt[1].replace("\"","")
+    #wkt[1] = _to_decdeg(wkt[1])
+
+    return tuple([float(c) for c in wkt])
+
 
 
 class RxCadreDb():
@@ -76,17 +107,22 @@ class RxCadreDb():
             self._dbase.close()
 
 
-    def _init_new_db(self):
+    def init_new_db(self):
         '''
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
         '''
+        stmts = open('../data/new_tables.sql').read().split(';')
+        for stmt in stmts:
+            self._cursor.execute(stmt)
+        """
+        See data/*.sql for creation routines.
+
         sql = '''CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
                                             geometry TEXT, plot_type TEXT)'''
         self._cursor.execute(sql)
-        sql = '''CREATE TABLE event(project_name TEXT,
-                                    event_name TEXT NOT NULL,
+        sql = '''CREATE TABLE event(event_name TEXT NOT NULL,
                                     event_start TEXT NOT NULL,
                                     event_end TEXT NOT NULL,
                                     PRIMARY KEY(project_name, event_name))'''
@@ -94,12 +130,46 @@ class RxCadreDb():
         sql = '''CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
                                         table_display name TEXT,
                                         timestamp_column TEXT NOT NULL,
-                                        geometry_column TEXT NOT NULL,
                                         obs_cols TEXT NOT NULL,
-                                        obs_col_names TEXT)
+                                        obs_col_names TEXT,
+                                        PRIMARY KEY(obs_table_name))
+              '''
+        self._cursor.execute(sql)
+        sql = '''CREATE_TABLE cup_vane_obs(plot_id TEXT NOT NULL,
+                                           timestamp TEXT NOT NULL,
+                                           direction REAL,
+                                           speed REAL,
+                                           gust REAL,
+                                           PRIMARY KEY(plot_id, timestamp)
               '''
 
         self._cursor.execute(sql)
+        sql = '''CREATE_TABLE fbp_obs(plot_id TEXT NOT NULL,
+                                           timestamp TEXT NOT NULL,
+                                           temperature REAL,
+                                           ks_v REAL,
+                                           ks_h REAL,
+                                           mt_t REAL,
+                                           mt_r REAL,
+                                           nar REAL,
+                                           PRIMARY KEY(plot_id, timestamp)
+              '''
+
+        self._cursor.execute(sql)
+        sql = 'INSERT INTO obs_table VALUES(?, ?, ?, ?, ?)'
+        self._cursor.execute(sql, ('cup_vane_obs', 'Wind Data', 'timestamp',
+                                   'direction,speed,gust',
+                                   'Direction,Speed,Gust')
+        self._cursor.execute(sql, ('fbp_obs', 'Fire Behavior Data',
+                                   'timestamp',
+                                   'temperature,ks_v,ks_h,mt_t,mt_r,nar'
+                                   'Temperature(C),Pressure Vertical,Pressure \
+                                   Horizontal,Medtherm Total, Medtherm \
+                                   Radiation,Narrow Angle \
+                                   Radiometer,speed,gust')
+                                   'Direction,Speed,Gust')
+        """
+
         self._dbase.commit()
 
 
@@ -155,7 +225,8 @@ class RxCadreDb():
             if set(col_names.keys()) < valid_cols:
                 raise ValueError('Column definition is invalid')
         sql = '''INSERT INTO obs_table VALUES(?, ?, ?, ?, ?, ?, ?)'''
-        self._cursor.execute(sql, table_name, table_name, time_col,
+        self._cursor.execute(sql, table_name, table_name,
+                                   time_col,
                              ','.join([name for name in col_names.keys()]),
                              ','.join([name for name in col_names.values()]))
         self._dbase.commit()
@@ -195,13 +266,13 @@ class RxCadreDb():
         return plots
 
 
-    def point_location(self, plot, db):
+    def point_location(self, plot):
         '''
         Fetch the x and y coordinate of the plot
         '''
         sql = '''SELECT geometry FROM plot_location WHERE plot_id=?'''
         self._cursor.execute(sql, (plot,))
-        row = cursor.fetchone()
+        row = self._cursor.fetchone()
         return _extract_xy(row[0])
 
 
@@ -245,7 +316,9 @@ class RxCadreDb():
         geom_col = row[2]
         obs_cols = [c.strip() for c in row[3].split(',')]
         obs_names = [c.strip() for c in row[4].split(',')]
-        # TODO: Check columns against supplied columns, not supported yet.
+        if cols:
+            if set(cols.keys()) > set(obs_cols):
+                raise ValueError('Invalid column requested')
         col_def = ''
         for i, col in enumerate(obs_cols):
             col_def += '%s as %s' % (col, obs_names[i])
@@ -256,7 +329,7 @@ class RxCadreDb():
               SELECT %s as timestamp, %s FROM %s WHERE plot_id=?
               ''' % (time_col, col_def, table_name)
         #AND %s BETWEEN ? AND ?
-        logging.debug('Unbound sql: %s', sql)
+        print('Unbound sql: %s', sql)
         self._cursor.execute(sql, (plot_name,))
 
         rows = self._cursor.fetchall()
@@ -269,3 +342,52 @@ class RxCadreDb():
         return data
 
 
+    def import_wind_data(self, csv_file, volatile=False, prog_func=None):
+        '''
+        Read in the data for the hobo loggers.  We currently have this as a
+        large single csv.
+        '''
+
+        if volatile:
+            self._cursor.execute('PRAGMA journal_mode=OFF')
+
+        fin = open(csv_file)
+        sql = "INSERT INTO cup_vane_obs VALUES(?, ?, ?, ?, ?)"
+        i = 0
+        fin.readline()
+        lines = fin.readlines()
+        if prog_func:
+            count = len(lines)
+            inc = int(float(count) / 100)
+            prog_func(0.0)
+
+        for line in lines:
+            if not line:
+                continue
+            line = line.split(',')
+            plot = '-'.join(line[6:8])
+            data = []
+            if plot == 'L1G-A13':
+                continue
+            data.append(plot)
+            data.append(_import_date(' '.join(line[1:3])))
+            data.append(float(line[3]))
+            data.append(float(line[4]))
+            data.append(float(line[5]))
+            self._cursor.execute(sql, tuple(data))
+            i += 1
+            if not volatile and i % inc == 0:
+                self._dbase.commit()
+            if prog_func:
+                prog_func(float(i) / count)
+
+        self._dbase.commit()
+        if volatile:
+            self._cursor.execute('PRAGMA journal_mode=ON')
+
+
+    def import_fbp_data(self, xls_file):
+        '''
+        Import the fire behavior package data
+        '''
+        pass
