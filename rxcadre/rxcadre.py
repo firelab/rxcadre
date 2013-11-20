@@ -144,6 +144,8 @@ class RxCadre:
     Main interface for RX Cadre data.
     """
     def __init__(self, db_file=None, new=False):
+        if db_file:
+            self.db_file = db_file
         if not new:
             try:
                 self.db = sqlite3.connect(db_file)
@@ -152,6 +154,7 @@ class RxCadre:
             except:
                 self.db = None
                 self.cur = None
+                self.db_file = None
         else:
             try:
                 self.db = self.init_new_db(db_file)
@@ -159,6 +162,8 @@ class RxCadre:
             except:
                 self.db = None
                 self.cur = None
+                self.db_file = None
+
 
     def __del__(self):
         """
@@ -184,6 +189,13 @@ class RxCadre:
         if self.db is None or self.cur is None:
             raise RxCadreInvalidDbError("Invalid database")
 
+
+    @property
+    def db_file(self):
+        '''
+        Get the file name of the database
+        '''
+        return self.db_file
 
     def check_valid_file(self,filepath):
         f= open(filepath,'r')
@@ -380,6 +392,32 @@ class RxCadre:
         self.cur.execute(sql)
         names = [n[0] for n in self.cur.fetchall()]
         return names
+
+
+    def get_event_data(self):
+        """
+        Get the event names and the start, stop times for the events.
+        """
+        self.check_db()
+        sql = "SELECT event_name, event_start, event_end from event"
+        self.cur.execute(sql)
+        events = dict()
+        for row in self.cur.fetchall():
+            events[row[0]] = (row[1], row[2])
+        return events
+
+
+    def get_plot_data(self):
+        '''
+        Get simple plot information.
+        '''
+        self.check_db()
+        sql = "SELECT plot_id, geometry from plot_location"
+        self.cur.execute(sql)
+        plots = []
+        for row in self.cur.fetchall():
+            plots.append(list(row))
+        return plots
 
 
     def point_location(self, plot, db):
@@ -979,19 +1017,34 @@ def rxcadre_main(args):
     Run the command line stuff.
     """
     if args.sub_cmd == 'create':
-        RxCadre(args.database)
+        rx = RxCadre(args.database, new=True)
         rx.init_new_db(args.database)
 
-    elif args.sub_cmd == 'import':
-        rx.import_
+    else:
+        try:
+            rx = RxCadre(args.database)
+        except RxCadreError as e:
+            print(e)
+            sys.exit(1)
 
-    elif args.sub_cmd == 'info':
-        if args.show_obs_tables:
-            names = rx.get_obs_table_names()
-            print('Tables: %s' % ','.join(names))
+        if args.sub_cmd == 'info':
+            if args.show_obs_tables:
+                names = rx.get_obs_table_names()
+                print('Tables: %s' % ','.join(names))
+            if args.show_events:
+                events = rx.get_event_data()
+                print('Events:')
+                if events:
+                    for k, v in events.items():
+                        print('    %s (%s to %s)' % (k, v[0], v[1]))
+            if args.show_plots:
+                plots = rx.get_plot_data()
+                print('Plots:')
+                for p in plots:
+                    print('    %s, %s' % (p[0], p[1]))
 
-    elif args.sub_cmd == 'graph':
-        pass
+        elif args.sub_cmd == 'graph':
+            pass
 
 
 if __name__ == "__main__":
@@ -1074,6 +1127,9 @@ if __name__ == "__main__":
                              action='store_true',
                              help='Show observation tables in a database')
     parser_info.add_argument('--events', dest='show_events',
+                             action='store_true',
+                             help='Show events tables in a database')
+    parser_info.add_argument('--plots', dest='show_plots',
                              action='store_true',
                              help='Show events tables in a database')
 

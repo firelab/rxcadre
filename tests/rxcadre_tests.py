@@ -44,6 +44,45 @@ sys.path.append('../rxcadre')
 
 from rxcadre import *
 
+
+def _create_table_data():
+    '''Create a valid table, then insert a few rows of valid obs data'''
+
+    db = RxCadre().init_new_db("")
+    c = db.cursor()
+    sql = '''
+          INSERT INTO plot_location VALUES(?, ?, ?, ?, 'TEST')
+          '''
+    x = 1
+    y = 2
+    c.execute(sql, ('A', x, y, 'POINT(%d %d)' % (x, y)))
+    x = 3
+    y = 4
+    c.execute(sql, ('B', x, y, 'POINT(%d %d)' % (x, y)))
+    sql = '''
+          CREATE TABLE test_obs(plot_id text,
+                                ts text,
+                                m integer)
+          '''
+    c.execute(sql)
+    sql = '''
+          INSERT INTO obs_table values(?, ?, ?, ?, ?, ?)
+          '''
+    c.execute(sql, ('test_obs', 'ts', 'wkt', 'm',
+                    'M', 'Test M'))
+    sql = '''
+          INSERT INTO test_obs values(?, ?, ?)
+          '''
+    c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 30), 1))
+    c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 35), 2))
+    c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 40), 3))
+    c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 30), 4))
+    c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 35), 5))
+    c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 40), 6))
+    db.commit()
+    return db
+
+
 class RxCadreTestDb(unittest.TestCase):
     """
     Test database creation and integrity.
@@ -74,33 +113,6 @@ class RxCadreTestDb(unittest.TestCase):
         return db
 
 
-    def create_table_data(self):
-        '''Create a valid table, then insert a few rows of valid obs data'''
-        db = self.rx.init_new_db("")
-        c = db.cursor()
-        sql = '''
-              CREATE TABLE test_obs(plot_id text,
-                                    ts text,
-                                    m integer)
-              '''
-        c.execute(sql)
-        sql = '''
-              INSERT INTO obs_table values(?, ?, ?, ?, ?, ?)
-              '''
-        c.execute(sql, ('test_obs', 'ts', 'wkt', 'm',
-                        'M', 'Test M'))
-        sql = '''
-              INSERT INTO test_obs values(?, ?, ?)
-              '''
-        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 30), 1))
-        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 35), 2))
-        c.execute(sql, ('A', datetime.datetime(2013, 11, 14, 15, 43, 40), 3))
-        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 30), 4))
-        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 35), 5))
-        c.execute(sql, ('B', datetime.datetime(2013, 11, 14, 15, 43, 40), 6))
-        db.commit()
-        return db
-
 
     def test_db_creation_1(self):
         '''Test valid creation'''
@@ -114,7 +126,7 @@ class RxCadreTestDb(unittest.TestCase):
 
     def test_db_internal_create_1(self):
         '''Test the internal creation of various tests'''
-        db = self.create_table_data()
+        db = _create_table_data()
         self.assertTrue(self.rx.check_valid_db(db))
 
     def test_db_init_1(self):
@@ -131,9 +143,10 @@ class RxCadreTestDb(unittest.TestCase):
         self.assertRaises(RxCadreIOError, self.rx.init_new_db,
                           'rxcadre_tests.py')
 
+
     def test_extract_1(self):
         '''Default extraction'''
-        db = self.create_table_data()
+        db = _create_table_data()
         self.rx.set_db(db)
         d = self.rx.extract_obs_data('test_obs', 'A')
         self.assertEqual(len(d), 2)
@@ -144,7 +157,7 @@ class RxCadreTestDb(unittest.TestCase):
     @unittest.skip('TODO')
     def test_extract_2(self):
         '''Time subset extraction'''
-        db = self.create_table_data()
+        db = _create_table_data()
         self.rx.set_db(db)
         s = datetime.datetime(2013, 11, 14, 15, 43, 29)
         e = datetime.datetime(2013, 11, 14, 16, 00, 36)
@@ -159,6 +172,38 @@ class RxCadreTestDb(unittest.TestCase):
         self.assertTrue(self.rx.check_valid_db(db))
         kml = self.rx._point_kml("K1",'kegan_test',db)
         kmz = self.rx.create_kmz("K1",'kegan_file','kegan_test',db)
+
+
+    @unittest.skip('TODO')
+    def test_cli_create_1(self):
+        '''Test the command line creation of a db'''
+        pass
+
+class RxCadreTestDbInfo(unittest.TestCase):
+    '''Check the info functionality of the cli'''
+
+    def setUp(self):
+        self.rx = RxCadre()
+        self.db = _create_table_data()
+        self.rx.set_db(self.db)
+
+
+    def test_db_info_1(self):
+        '''Check observation table names'''
+        d = self.rx.get_obs_table_names()
+        self.assertEqual(d, ['test_obs',])
+
+
+    def test_db_info_2(self):
+        '''Check event names'''
+        d = self.rx.get_event_data()
+        self.assertEqual(d, {})
+
+
+    def test_db_info_3(self):
+        '''Check plot names'''
+        d = self.rx.get_plot_data()
+        self.assertEqual(d, [['A', 'POINT(1 2)'], ['B', 'POINT(3 4)']])
 
 
 if __name__ == '__main__':
