@@ -52,8 +52,52 @@ CREATE TABLE event
 CREATE TABLE obs_table
 (
     obs_table_name TEXT NOT NULL,
-    geometry_column TEXT NOT NULL,
+    table_display_name TEXT,
+    timestamp_column TEXT NOT NULL,
     obs_cols TEXT NOT NULL,
     obs_col_names TEXT
+);
+
+CREATE TABLE cup_vane_obs
+(
+    plot_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    speed REAL,
+    gust REAL,
+    direction REAL,
+    PRIMARY KEY(plot_id, timestamp)
+    FOREIGN KEY(plot_id) REFERENCES plot_location(plot_id)
+);
+
+CREATE TABLE fbp_obs
+(
+    plot_id TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    temperature REAL,
+    mt_t REAL,
+    mt_r REAL,
+    ks_v REAL,
+    ks_h REAL,
+    nar REAL,
+    PRIMARY KEY(plot_id, timestamp),
+    FOREIGN KEY(plot_id) REFERENCES plot_location(plot_id)
+);
+
+INSERT INTO obs_table VALUES
+(
+    'cup_vane_obs',
+    'Wind Data',
+    'timestamp',
+    'direction,speed,gust',
+    'Direction,Speed,Gust'
+);
+
+INSERT INTO obs_table VALUES
+(
+    'fbp_obs',
+    'Fire Behavior Data',
+    'timestamp',
+    'temperature,mt_t,mt_r,ks_v,ks_h,nar',
+    'Temperature(C),Medtherm Total, Medtherm Radiant,Pressure Vertical,Pressure Horizontal,Narrow Angle Radiometer'
 );
 
