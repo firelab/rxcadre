@@ -216,7 +216,7 @@ class TestRxCadreDb(unittest.TestCase):
 
     def test_init_db_valid_1(self):
         '''Test valid creation'''
-        self.test_db._init_new_db()
+        self.test_db.init_new_db()
         self.assert_(self.test_db.check_valid_db())
 
 
