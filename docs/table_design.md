@@ -48,10 +48,10 @@ plots are described as points.  Geometry is stored as OGC well-known text
 geometry (POINT( x y )).  Plot type may be used to extract other data from
 tables.
 
-| project\_name | plot\_id | x         | y         | wkt\_geometry              | plot\_type |
-| ------------- | -------- | --------- | ----------| -------------------------- | ---------- |
-| 'RX Cadre'    | KYLE\_1  | -113.99   | 47.01     | POINT(-113.99 47.01)       | CUP\_VANE  |
-| 'RX Cadre'    | KYLE\_2  | -114.0043 | 45.044856 | POINT(-114.0043 45.044856) | FBP        |
+| plot\_id | x         | y         | wkt\_geometry              | plot\_type |
+| -------- | --------- | ----------| -------------------------- | ---------- |
+| KYLE\_1  | -113.99   | 47.01     | POINT(-113.99 47.01)       | CUP\_VANE  |
+| KYLE\_2  | -114.0043 | 45.044856 | POINT(-114.0043 45.044856) | FBP        |
 
 PRIMARY\_KEY(plot\_id)
 
@@ -75,13 +75,13 @@ PRIMARY\_KEY(obs\_table\_name)
 The event table holds pre-determined events for a given project.  The table
 specifies the start and end time for some event for subsetting temporally.
 
-| project\_name | event\_name | event\_start    | event\_end      |
-| ------------- | ----------- | --------------- | --------------- |
-| 'RX Cadre'    | 'S1'        | '20120912T1243' | '20120912T1534' |
-| 'RX Cadre'    | 'S4'        | '20120914T1822' | '20120914T1930' |
+| event\_name | event\_start    | event\_end      |
+| ----------- | --------------- | --------------- |
+| 'S1'        | '20120912T1243' | '20120912T1534' |
+| 'S4'        | '20120914T1822' | '20120914T1930' |
 
 
-PRIMARY\_KEY(project\_name, event\_name)
+PRIMARY\_KEY(event\_name)
 
 #### _Notes_\:
 
