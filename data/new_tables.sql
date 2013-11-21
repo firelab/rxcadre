@@ -79,6 +79,8 @@ CREATE TABLE fbp_obs
     ks_v REAL,
     ks_h REAL,
     nar REAL,
+    mt_body REAL,
+    bat_volt REAL,
     PRIMARY KEY(plot_id, timestamp),
     FOREIGN KEY(plot_id) REFERENCES plot_location(plot_id)
 );
@@ -97,7 +99,7 @@ INSERT INTO obs_table VALUES
     'fbp_obs',
     'Fire Behavior Data',
     'timestamp',
-    'temperature,mt_t,mt_r,ks_v,ks_h,nar',
-    'Temperature(C),Medtherm Total, Medtherm Radiant,Pressure Vertical,Pressure Horizontal,Narrow Angle Radiometer'
+    'temperature,mt_t,mt_r,ks_v,ks_h,nar,mt_body,bat_volt',
+    'Temperature(C),Medtherm Total, Medtherm Radiant,Pressure Vertical,Pressure Horizontal,Narrow Angle Radiometer,Medtherm Housing Temperature,Battery Voltage'
 );
 
