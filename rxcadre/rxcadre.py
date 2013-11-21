@@ -70,7 +70,11 @@ from windrose import *
 ###############################################################################
 # Logging stuff.
 ###############################################################################
-logging.basicConfig(level=logging.WARNING)
+log_level = { 'debug'    : logging.DEBUG,
+              'info'     : logging.INFO,
+              'warning'  : logging.WARNING,
+              'error'    : logging.ERROR,
+              'critical' : logging.CRITICAL }
 
 ###############################################################################
 # Generic module specific errors
@@ -397,13 +401,17 @@ class RxCadre:
         return names
 
 
-    def get_event_data(self):
+    def get_event_data(self, event_name=None):
         '''
         Get the event names and the start, stop times for the events.
         '''
         self.check_db()
         sql = "SELECT event_name, event_start, event_end from event"
-        self.cur.execute(sql)
+        if event_name:
+            sql += ' WHERE event_name=?'
+            self.cur.execute(sql, (event_name,))
+        else:
+            self.cur.execute(sql)
         events = dict()
         for row in self.cur.fetchall():
             events[row[0]] = (row[1], row[2])
@@ -618,6 +626,7 @@ class RxCadre:
         '''
         Create a time series image for the plot over the time span
         '''
+        '''
         if type(data) == list:
             spd = [float(spd[2]) for spd in data]
             gust = [float(gust[4]) for gust in data]
@@ -625,9 +634,9 @@ class RxCadre:
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
         if type(data) == str:
             cursor = db.cursor()
-            sql = '''SELECT * FROM '''+data+'''
+            sql = """SELECT * FROM """+data+"""
                           WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?'''
+                           AND ?"""
             #Note to self: removed quality tab from this.  may want to keep it
             cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
             data = cursor.fetchall()
@@ -635,16 +644,18 @@ class RxCadre:
             gust = [float(gust[4]) for gust in data]
             dir = [float(dir[3]) for dir in data]
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
+        '''
 
+        time = [mdates.date2num(datetime.datetime.strptime(d,'%Y-%m-%d %H:%M:%S')) for d in data['timestamp']]
         #fig = plt.figure(figsize=(8,8), dpi=80)
         fig = plt.figure()
         ax1 = fig.add_subplot(211)
-        ax1.plot_date(time, spd, 'b-')
+        ax1.plot_date(time, data['speed'], 'b-')
         #ax1.plot_date(time, gust, 'g-')
         ax1.set_xlabel('Time (s)')
         ax1.set_ylabel('Speed(mph)', color = 'b')
         ax2 = fig.add_subplot(212)
-        ax2.plot_date(time, dir, 'r.')
+        ax2.plot_date(time, data['direction'], 'r.')
         ax2.set_ylabel('Direction', color='r')
         fig.autofmt_xdate()
         plt.suptitle('Plot %s from %s to %s' % (plt_title, 
@@ -709,14 +720,14 @@ class RxCadre:
         dispatching the beast: 2500 gold pieces, 1d6 Ogre's Toes, Sword of Greater Banish Evil,
         the remains of Sir Galdrich and the gratitude of King Balther, Lord of Castle Grazen.
         '''
-        
+
         cursor = db.cursor()
         sql = '''SELECT DISTINCT(plot_id_table) FROM '''+table+'''
                    WHERE timestamp BETWEEN ? AND ?'''
         cursor.execute(sql, (start, end))
         plots = [c[0] for c in cursor.fetchall()]
 
-        
+
         user_frmt = 'ESRI Shapefile'
         driver = ogr.GetDriverByName(user_frmt)
         os.chdir(path) 
@@ -733,19 +744,19 @@ class RxCadre:
         layer = ds.CreateLayer(filename,SR, geom_type=ogr.wkbPoint)
         featureDefn = layer.GetLayerDefn()
 
-            
+
         #FIELDS:
         SR = osr.SpatialReference()
         SR.ImportFromEPSG(4326)
-        
+
         fieldDefn = ogr.FieldDefn('Plot ID', ogr.OFTString)
         fieldDefn.SetWidth(50)
         layer.CreateField(fieldDefn)
-            
+
         fieldDefn2 = ogr.FieldDefn('Speed Mean', ogr.OFTString)
         fieldDefn2.SetWidth(50)
         layer.CreateField(fieldDefn2)
-            
+
         fieldDefn3 = ogr.FieldDefn('Spd Stdev', ogr.OFTString)
         fieldDefn3.SetWidth(50)
         layer.CreateField(fieldDefn3)
@@ -768,16 +779,16 @@ class RxCadre:
 
             cursor.execute(sql)
             loc = cursor.fetchall()
- 
+
             loc = loc[0]
             print loc
 
             (spd_mean, spd_stddev), gust_max, (direction_mean, direction_stddev) = self.statistics(table,plot,db)
-   
+
             # create a new point object
             point = ogr.Geometry(ogr.wkbPoint)
             point.AddPoint(loc[0],loc[1])
-            
+
 
             #NOW OUR FEATURE PRESENTATION:
             feature = ogr.Feature(featureDefn)
@@ -788,17 +799,14 @@ class RxCadre:
             feature.SetField('Gust Max', str(gust_max))
             feature.SetField('Dir Mean', str(direction_mean))
             feature.SetField('Dir Stdev',str(direction_stddev))
-            
-          
+
+
             # add the feature to the output layer
             layer.CreateFeature(feature)
-            
+
             #small destroy
             point.Destroy()
             feature.Destroy()
-        
-        
-
 
         #DESTROY!
         ds.Destroy()
@@ -1008,10 +1016,20 @@ time, date, plotID, wind speed, wind direction and wind gust column
             db.close()
             p = "Data imported successfully"
 
+
 def rxcadre_main(args):
     '''
     Run the command line stuff.
     '''
+
+    quiet = args.quiet
+    if not quiet:
+        try:
+            logging.basicConfig(level=log_level[args.level.lower()])
+            print('Set log level')
+        except KeyError:
+            logging.basicConfig(logging.CRITICAL)
+
     if args.sub_cmd == 'create':
         rx = RxCadre(args.database, new=True)
         rx.init_new_db(args.database)
@@ -1024,6 +1042,7 @@ def rxcadre_main(args):
             sys.exit(1)
 
         if args.sub_cmd == 'info':
+            quiet = False
             if args.show_obs_tables:
                 names = rx.get_obs_table_names()
                 print('Tables: %s' % ','.join(names))
@@ -1040,9 +1059,66 @@ def rxcadre_main(args):
                     print('    %s, %s' % (p[0], p[1]))
 
         elif args.sub_cmd == 'export':
-            data = rx.extract_obs_data('cup_vane_obs', 'S8-A66')
-            print len(data['gust'])
 
+            # Check the time(s)
+            if args.event and (args.start or args.end):
+                if not quiet:
+                    print('Conflicting time options, choose event *or* start/end')
+                sys.exit(1)
+            if args.event:
+                try:
+                    start, end = tuple(rx.get_event_data(args.event)[args.event])
+                    start = datetime.datetime.strptime(start, '%Y-%m-%d %H:%M:%S')
+                    end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S')
+                except KeyError:
+                    print("Event %s does not exist" % args.event)
+                    sys.exit(1)
+                logging.debug('Setting time bounds from event: %s(%s, %s)', 
+                              args.event, str(start), str(end))
+
+            elif args.start or args.end:
+                try:
+                    start = datetime.datetime.strptime(args.start,
+                                                       '%Y%m%dT%H%M')
+                except ValueError:
+                    print('Invaild start date, must be in the format of: ' \
+                          'YYYYMMDDTHHMM')
+                    sys.exit(1)
+                try:
+                    end = datetime.datetime.strptime(args.end,
+                                                     '%Y%m%dT%H%M')
+                except ValueError:
+                    print('Invaild end date, must be in the format of: ' \
+                          'YYYYMMDDTHHMM')
+                    sys.exit(1)
+
+            else:
+                start = None
+                end = None
+
+            if(start > end):
+                print('Start time must be less than end time')
+                sys.exit()
+
+            plots = args.plots
+            if not plots:
+                plots = [p[0] for p in rx.get_plot_data()]
+            #
+            # If we are showing plots, limit it to one plot
+            #
+            if args.show_only:
+                plots = plots[:1]
+            for plot in plots:
+                data = rx.extract_obs_data('cup_vane_obs', plot, start, end)
+                if not data:
+                    if not quiet:
+                        print('Plot %s does not exist' % plot)
+                    sys.exit(1)
+                #old_data = [None, data['timestamp'], data['speed'],
+                #            data['direction'], data['gust']]
+                if args.timeseries:
+                    rx.create_time_series_image(data, 'Test', start, end,
+                                                None, '')
 
 if __name__ == "__main__":
     '''
@@ -1085,7 +1161,7 @@ if __name__ == "__main__":
     Export parser.
     '''
     parser_extract = subparsers.add_parser('export', help='Extract plot data')
-    parser_extract.add_argument('--plots', dest='plot', type=str,
+    parser_extract.add_argument('--plots', dest='plots', type=str,
                                 nargs='*', default=[],
                                 help='Plot names to extract')
     parser_extract.add_argument('--start', dest='start', type=str,
@@ -1106,7 +1182,7 @@ if __name__ == "__main__":
     parser_extract.add_argument('--ogr', dest='ogr_frmt', type=str,
                                 default='ESRI Shapefile',
                                 help='Create an ogr dataset using this driver')
-    parser_extract.add_argument('--show-only', dest='show-only',
+    parser_extract.add_argument('--show-only', dest='show_only',
                                 action='store_true',
                                 help='Show the images, don\'t write a file')
     parser_extract.add_argument('--path', type=str, default='.',
@@ -1135,6 +1211,11 @@ if __name__ == "__main__":
     parser_edit = subparsers.add_parser('edit', help='Update db information')
     '''
 
+    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
+                        help='Database to act on')
+    parser.add_argument('-l', '--logging', type=str, dest='level',
+                        default='critical',
+                        help='Logging level(DEBUG,INFO,WARNING,ERROR,CRITICAL')
     parser.add_argument('database', type=str, help='Database to act on')
 
     args = parser.parse_args()

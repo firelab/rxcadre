@@ -41,6 +41,7 @@ SQLite related class for storage of time series data
 
 import datetime
 import logging
+import os
 import sqlite3
 
 ###############################################################################
@@ -369,6 +370,7 @@ class RxCadreDb():
             inc = int(float(count) / 100)
             prog_func(0.0)
 
+        self._cursor.execute('BEGIN')
         for line in lines:
             if not line:
                 continue
@@ -393,6 +395,7 @@ class RxCadreDb():
             if prog_func:
                 prog_func(float(i) / count)
 
+        self._cursor.execute('END')
         self._dbase.commit()
         if volatile:
             self._cursor.execute('PRAGMA journal_mode=ON')
@@ -401,8 +404,57 @@ class RxCadreDb():
             prog_func(1.0)
 
 
-    def import_fbp_data(self, xls_file):
+    def import_fbp_data(self, path, volatile=False, prog_func=None):
         '''
-        Import the fire behavior package data
+        Import the fire behavior package data from a path.  This recursively
+        runs through and opens any/all csv file and does a very simple header
+        check.  Import data is assumed to be constant schema.
+
+        If the path is only on csv file, import that.
+
+        Time is in 2 columns, 1 and 2 as Date and then time
+
+        We import temperature, medtherm, kiel-static probe, narrow-angle
+        radiometer, medtherm housing temperature, and battery voltage.
+
+        These are columns 4, (5,6), (27,28), 7, 29, 31
+
+        :param path: path to start recursive import
+        :return:
         '''
-        pass
+
+        csv_files = []
+        if path.endswith('.csv'):
+            csv_files.append(path)
+        else:
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    if file.endswith(".csv"):
+                         csv_files.append(os.path.join(root, file))
+
+        if not csv_files:
+            raise ValueError('Invalid path, no csv files found')
+        i = 0
+        if prog_func:
+            prog_func(0.0)
+        csv_count = len(csv_files)
+
+        if volatile:
+            self._cursor.execute('PRAGMA journal_mode=OFF')
+
+        for csv in csv_files:
+            self._cursor.execute('BEGIN')
+            fin = open(csv)
+            for line in fin:
+                line = line.split(',')
+
+        self._cursor.execute('END')
+        self._db.commit()
+
+        if volatile:
+            self._cursor.execute('PRAGMA journal_mode=ON')
+
+        if prog_func:
+            prog_func(1.0)
+
+
