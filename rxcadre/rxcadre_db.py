@@ -442,14 +442,37 @@ class RxCadreDb():
         if volatile:
             self._cursor.execute('PRAGMA journal_mode=OFF')
 
+        sql = 'INSERT INTO fbp_obs VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        plot = 'S8-11'
+        h = True
         for csv in csv_files:
+            print(csv)
             self._cursor.execute('BEGIN')
             fin = open(csv)
             for line in fin:
+                if h:
+                    h = False
+                    continue
                 line = line.split(',')
-
-        self._cursor.execute('END')
-        self._db.commit()
+                date = line[1].strip().replace('/', '-')
+                time = line[2].strip()
+                dt = date + ' ' + time
+                if not dt.find('.') >= 0:
+                    dt += '.0'
+                else:
+                    dt = dt[:-2]
+                print dt
+                t = float(line[4])
+                mtt = float(line[5])
+                mtr = float(line[6])
+                ksv = float(line[27])
+                ksh = float(line[28])
+                nar = float(line[7])
+                mth = float(line[29])
+                bat = float(line[31])
+                self._cursor.execute(sql, (plot, dt, t, mtt, mtr, ksv, ksh,
+                                           nar, mth, bat))
+            self._cursor.execute('END')
 
         if volatile:
             self._cursor.execute('PRAGMA journal_mode=ON')

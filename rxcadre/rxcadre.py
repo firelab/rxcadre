@@ -244,7 +244,6 @@ class RxCadre:
         return begin, stop
 
     def get_min_time(self, name, table):
-        print name, table
         db = sqlite3.connect(name)
         cursor = db.cursor()
         sql = "SELECT MIN(timestamp) FROM "+table
@@ -276,7 +275,6 @@ class RxCadre:
         db = sqlite3.connect(name)
         if self.check_valid_db(db) == False:
             e ='The selected database appears to be of an incorrect format.  Please select a different database.'
-            print e
             db.commit()
             db.close()
             os.remove(name)
@@ -418,17 +416,35 @@ class RxCadre:
         return events
 
 
-    def get_plot_data(self):
+    def get_plot_data(self, plot_name=None):
         '''
         Get simple plot information.
         '''
         self.check_db()
-        sql = "SELECT plot_id, geometry from plot_location"
-        self.cur.execute(sql)
+        if not plot_name:
+            sql = "SELECT plot_id, geometry, plot_type from plot_location"
+            self.cur.execute(sql)
+        else:
+            sql = "SELECT plot_id, geometry, plot_type from plot_location WHERE plot_id=?"
+            self.cur.execute(sql, (plot_name,))
         plots = []
         for row in self.cur.fetchall():
             plots.append(list(row))
         return plots
+
+
+    def get_obs_cols(self, table_name):
+        '''
+        Get the observation column names
+        '''
+        sql = '''SELECT obs_cols, obs_col_names FROM obs_table WHERE obs_table_name=?'''
+        self.cur.execute(sql, (table_name,))
+        row = self.cur.fetchone()
+        if not row:
+            raise RxCadreInvalidDataError('Table %s is not in obs_table' %
+                                          table_name)
+        return dict(zip([obs for obs in row[0].split(',')],
+                        [obs for obs in row[1].split(',')]))
 
 
     def point_location(self, plot, db):
@@ -463,6 +479,36 @@ class RxCadre:
         logging.info('Query fetched %i result(s)' % len(data))
         return data
 
+    def calc_statistics(self, data):
+        '''
+        Generic, normal stats.
+        '''
+        stats = dict()
+        for k,v in data.items():
+            if k == 'direction' or k == 'timestamp':
+                continue
+            samples = np.array(v)
+            min = np.min(samples)
+            max = np.max(samples)
+            mean = np.mean(samples)
+            std = np.std(samples)
+            stats[k] = (min, max, mean, std)
+        return stats
+
+    def calc_circ_statistics(self, data):
+
+        try:
+            d = data['direction']
+        except KeyError:
+            return (0, 0, 0, 0)
+        samples = np.array(d)
+        min = np.min(d)
+        max = np.max(d)
+        mean = stats.morestats.circmean(samples, 360, 0)
+        std = stats.morestats.circstd(samples, 360, 0)
+        return (min, max, mean, std)
+
+
     def statistics(self, data,plot,db):
         '''
         Calculate the stats for speed and direction data
@@ -470,9 +516,9 @@ class RxCadre:
         '''Made it so this function can pull data from db or file'''
         if type(data) == str:
             cursor = db.cursor()
-    
+
             sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data+" WHERE plot_id_table = '"+plot+"'"
-       
+
             cursor.execute(sql)
             data = cursor.fetchall()
 
@@ -494,33 +540,40 @@ class RxCadre:
         return (spd_mean, spd_stddev), (gust_max), (direction_mean, direction_stddev)
 
 
-    def _point_kml(self, plot, data, db, images=[]):
+    def _point_kml(self, plot, data, images=[]):
         '''
         Create a kml representation of a plot
         '''
-        #print images
 
-        lon, lat = self.point_location(plot,db)
-        stats = self.statistics(data,plot,db)
+        #lon, lat = self.point_location(plot,db)
+        lon, lat = _extract_xy(self.get_plot_data(plot)[0][1])
+        stats = self.calc_statistics(data)
+        stats['direction'] = self.calc_circ_statistics(data)
         if stats is None:
             logging.warning('Could not calculate stats')
             return ''
-        d = stats[2][0]
-        if d < 0:
-            d = d + 360.0
+        wind = True
+        try:
+            d = stats['direction'][2]
+            if d < 0:
+                d = d + 360.0
+        except KeyError:
+            wind = False
+        stat_order = ('min', 'max', 'mean', 'stddev')
 
-        kml =               '  <Placemark>\n' \
-                            '    <Style>\n' \
+        kml =               '  <Placemark>\n'
+        if wind:
+            kml = kml +     '    <Style>\n' \
                             '      <IconStyle>\n' \
                             '        <Icon>\n' \
                             '          <href>http://maps.google.com/mapfiles/kml/shapes/arrow.png</href>\n' \
                             '        </Icon>\n' \
-                            '        <heading>%s</heading>\n' \
-                            '      </IconStyle>\n' \
-                            '    </Style>\n' \
-                            '    <Point>\n' \
+                            '        <heading>%s</heading>\n' % d
+            kml = kml +     '      </IconStyle>\n' \
+                            '    </Style>\n'
+        kml = kml +         '    <Point>\n' \
                             '      <coordinates>%.9f,%.9f,0</coordinates>\n' \
-                            '    </Point>\n' % (d, lon, lat)
+                            '    </Point>\n' % (lon, lat)
         kml = kml +         '    <name>%s</name>\n' \
                             '    <description>\n' \
                             '      <![CDATA[\n' % plot
@@ -529,38 +582,21 @@ class RxCadre:
         kml = kml +         '        <table border="1">' \
                             '          <tr>\n' \
                             '            <th>Stats</th>\n' \
-                            '          </tr>\n' \
-                            '          <tr>\n' \
-                            '            <td>Average Speed</td>\n' \
+                            '          </tr>\n'
+        for key in stats.keys():
+            for i, s in enumerate(stats[key]):
+                kml = kml + '          <tr>\n' \
+                            '            <td>%s</td>\n' \
                             '            <td>%.2f</td>\n' \
-                            '          </tr>\n' \
-                            '          <tr>\n' \
-                            '            <td>STDDEV Speed</td>\n' \
-                            '            <td>%.2f</td>\n' \
-                            '          </tr>\n' \
-                            '          <tr>\n' \
-                            '            <td>Max Gust</td>\n' \
-                            '            <td>%.2f</td>\n' \
-                            '          </tr>\n' \
-                            '          <tr>\n' \
-                            '            <td>Average Direction</td>\n' \
-                            '            <td>%.2f</td>\n' \
-                            '          </tr>\n' \
-                            '          <tr>\n' \
-                            '            <td>STDDEV Direction</td>\n' \
-                            '            <td>%.2f</td>\n' \
-                            '          </tr>\n' \
-                            '        </table>\n'% (stats[0][0], stats[0][1],
-                                                   stats[1], stats[2][0], 
-                                                   stats[2][1])
-        kml = kml +         '      ]]>\n' \
+                            '          </tr>\n' % (stat_order[i], stats[key][i])
+        kml = kml +         '        </table>\n' \
+                            '      ]]>\n' \
                             '    </description>\n' \
                             '  </Placemark>\n'
         return kml
 
 
-    def extract_obs_data(self, table_name, plot_name, start=None, end=None,
-                         cols={}):
+    def extract_obs_data(self, table_name, plot_name, start=None, end=None):
         '''
         Extract data from a table in obs_table for generating output.
 
@@ -576,14 +612,6 @@ class RxCadre:
         :param end: datetime representation of when to end data extraction,
                     if absent, use latest available timestamp.
 
-        :param cols: dictionary with keys representing names of columns to
-                     extract.  If absent, the metadata from obs_table (obs_cols
-                     and obs_col_names) will be used.  The values associated
-                     with the keys are human readable names for display.  If
-                     they are absent, obs_col_names is checked, and then the
-                     text in obs_cols is used.  If present, it the keys *must*
-                     be a subset of columns in the obs_tables/obs_cols values
-
         :return: A dictionary with keys of {obs_cols:obs_names} keys and lists
                  of values, ie:
 
@@ -598,31 +626,38 @@ class RxCadre:
                                           table_name)
         time_col = row[2]
         obs_cols = [c.strip() for c in row[3].split(',')]
-        obs_names = [c.strip() for c in row[4].split(',')]
-        # TODO: Check columns against supplied columns, not supported yet.
-        col_def = ''
-        for i, col in enumerate(obs_cols):
-            col_def += '%s as %s' % (col, obs_names[i])
-            if i < len(obs_cols) -1:
-                col_def += ','
-        logging.debug('SQL as stmt: %s' % col_def)
+        if not start:
+            sql = 'SELECT MIN(datetime(%s)) FROM %s WHERE plot_id=?' % (time_col, table_name)
+            self.cur.execute(sql, (plot_name,))
+            start = datetime.datetime.strptime(self.cur.fetchone()[0],
+                                               '%Y-%m-%d %H:%M:%S')
+        if not end:
+            sql = 'SELECT MAX(datetime(%s)) FROM %s WHERE plot_id=?' % (time_col, table_name)
+            self.cur.execute(sql, (plot_name,))
+            end = datetime.datetime.strptime(self.cur.fetchone()[0],
+                                             '%Y-%m-%d %H:%M:%S')
         sql = '''
-              SELECT %s as timestamp, %s FROM %s WHERE plot_id=?
-              ''' % (time_col, col_def, table_name)
-        #AND %s BETWEEN ? AND ?
+              SELECT %s as timestamp, %s FROM %s WHERE plot_id=? AND 
+              datetime(%s) BETWEEN datetime(?) AND datetime(?)
+              ''' % (time_col, ','.join(obs_cols), table_name, time_col)
+
         logging.debug('Unbound sql: %s' % sql)
-        self.cur.execute(sql, (plot_name,))
+        self.cur.execute(sql, (plot_name, start, end))
 
         rows = self.cur.fetchall()
 
         data = dict()
-        data['timestamp'] = [r[0] for r in rows]
+        # FIXME: Hack for different types of tables.
+        if 'direction' in set(obs_cols):
+            data['timestamp'] = [datetime.datetime.strptime(r[0] + '.0', '%Y-%m-%d %H:%M:%S.%f') for r in rows]
+        else:
+            data['timestamp'] = [datetime.datetime.strptime(r[0], '%Y-%m-%d %H:%M:%S.%f') for r in rows]
         for i, c in enumerate(obs_cols):
             data[c] = [r[i+1] for r in rows]
 
         return data
 
-    def create_time_series_image(self, data, plt_title, start, end, db, filename = ''):
+    def create_time_series_image(self, data, plt_title, start, end, filename=''):
         '''
         Create a time series image for the plot over the time span
         '''
@@ -646,21 +681,37 @@ class RxCadre:
             time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
         '''
 
-        time = [mdates.date2num(datetime.datetime.strptime(d,'%Y-%m-%d %H:%M:%S')) for d in data['timestamp']]
-        #fig = plt.figure(figsize=(8,8), dpi=80)
+        # FIXME: Hack for different data.
+        wind = True
+        try:
+            data['direction']
+        except KeyError:
+            wind = False
+
         fig = plt.figure()
-        ax1 = fig.add_subplot(211)
-        ax1.plot_date(time, data['speed'], 'b-')
-        #ax1.plot_date(time, gust, 'g-')
-        ax1.set_xlabel('Time (s)')
-        ax1.set_ylabel('Speed(mph)', color = 'b')
-        ax2 = fig.add_subplot(212)
-        ax2.plot_date(time, data['direction'], 'r.')
-        ax2.set_ylabel('Direction', color='r')
+        time = [mdates.date2num(d) for d in data['timestamp']]
+        if not wind:
+            cols = self.get_obs_cols('fbp_obs')
+            i = 1
+            for k,v in cols.items():
+                ax = fig.add_subplot(len(cols), 2, i)
+                ax.plot_date(time, data[k])
+                i += 1
+        else:
+            #fig = plt.figure(figsize=(8,8), dpi=80)
+            ax1 = fig.add_subplot(211)
+            ax1.plot_date(time, data['speed'], 'b-')
+            #ax1.plot_date(time, data['gust'], 'g-')
+            ax1.set_xlabel('Time (s)')
+            ax1.set_ylabel('Speed(mph)', color = 'b')
+            ax2 = fig.add_subplot(212)
+            ax2.plot_date(time, data['direction'], 'r.')
+            ax2.set_ylabel('Direction', color='r')
+
         fig.autofmt_xdate()
         plt.suptitle('Plot %s from %s to %s' % (plt_title, 
-                     start.strftime('%m/%d/%Y %I:%M:%S %p'),
-                     end.strftime('%m/%d/%Y %I:%M:%S %p')))
+                     data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
+                     data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
         if not filename:
             plt.show()
             plt.close()
@@ -670,36 +721,22 @@ class RxCadre:
         return filename
 
 
-    def create_windrose(self, data, plt_title,start,end,filename,db):
+    def create_windrose(self, data, plt_title, start, end, filename=''):
         '''
         Create a windrose from a dataset.
         '''
 
-        if type(data) == list:
-            spd = [float(spd[2]) for spd in data]
-            gust = [float(gust[4]) for gust in data]
-            dir = [float(dir[3]) for dir in data]
-            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
-        if type(data) == str:
-            cursor = db.cursor()
-            sql = '''SELECT * FROM '''+data+'''
-                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?'''
-            #Note to self: removed quality tab from this.  may want to keep it
-            cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
-            data = cursor.fetchall()
-            spd = [float(spd[2]) for spd in data]
-            gust = [float(gust[4]) for gust in data]
-            dir = [float(dir[3]) for dir in data]
-            time = [mdates.date2num(datetime.datetime.strptime(d[1],'%Y-%m-%d %H:%M:%S')) for d in data]
-
+        try:
+            data['direction']
+        except KeyError:
+            return
         if len(data) >= 1:
             #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
             fig = plt.figure(facecolor='w', edgecolor='w')
             rect = [0.1, 0.1, 0.8, 0.8]
             ax = WindroseAxes(fig, rect, axisbg='w')
             fig.add_axes(ax)
-            ax.bar(dir, spd, normed=True, opening=0.8, edgecolor='white')
+            ax.bar(data['direction'], data['speed'], normed=True, opening=0.8, edgecolor='white')
             #l = ax.legend(axespad=-0.10)
             l = ax.legend(1.0)
             plt.setp(l.get_texts(), fontsize=8)
@@ -737,9 +774,9 @@ class RxCadre:
         ds = driver.CreateDataSource(filename +'.shp')
         if ds is None:
             print 'Could not create file'
-            sys.exit(1)
+            raise RxCadreIOError('Could not create OGR datasource')
         SR = osr.SpatialReference()
-        SR.ImportFromEPSG(4326)
+        SR.ImportFromEPSG(4269)
         SR.ExportToPrettyWkt()
         layer = ds.CreateLayer(filename,SR, geom_type=ogr.wkbPoint)
         featureDefn = layer.GetLayerDefn()
@@ -747,7 +784,7 @@ class RxCadre:
 
         #FIELDS:
         SR = osr.SpatialReference()
-        SR.ImportFromEPSG(4326)
+        SR.ImportFromEPSG(4269)
 
         fieldDefn = ogr.FieldDefn('Plot ID', ogr.OFTString)
         fieldDefn.SetWidth(50)
@@ -781,7 +818,6 @@ class RxCadre:
             loc = cursor.fetchall()
 
             loc = loc[0]
-            print loc
 
             (spd_mean, spd_stddev), gust_max, (direction_mean, direction_stddev) = self.statistics(table,plot,db)
 
@@ -864,7 +900,7 @@ class RxCadre:
         return filename
 
 
-    def create_kmz(self, plot, filename,table,start,end,pngfile,rosefile,data,db):
+    def create_kmz(self, plot, filename,table,start,end,pngfile,rosefile,data):
         '''
         Write a kmz with a time series and wind rose.  The stats are included
         in the html bubble as well.
@@ -874,8 +910,11 @@ class RxCadre:
         if filename[-4:] != '.kmz':
             filename = filename + '.kmz'
 
-        #data = self.fetch_point_data(plot,table,start,end,db)
-        kml = self._point_kml(plot, data, db,[pngfile,rosefile])
+        if rosefile == '':
+            images = [pngfile,]
+        else:
+            images = [pngfile, rosefile]
+        kml = self._point_kml(plot, data, images)
 
         kmlfile = 'doc.kml'
         fout = open(kmlfile, 'w')
@@ -884,12 +923,12 @@ class RxCadre:
 
         kmz = zipfile.ZipFile( filename, 'w', 0, True)
         kmz.write(kmlfile)
-        kmz.write(pngfile)
-        kmz.write(rosefile)
+        for image in images:
+            kmz.write(image)
         kmz.close()
         os.remove(kmlfile)
-        #os.remove(pngfile)
-        #os.remove(rosefile)
+        for image in images:
+            os.remove(image)
         return filename
 
 
@@ -1026,7 +1065,6 @@ def rxcadre_main(args):
     if not quiet:
         try:
             logging.basicConfig(level=log_level[args.level.lower()])
-            print('Set log level')
         except KeyError:
             logging.basicConfig(logging.CRITICAL)
 
@@ -1100,25 +1138,55 @@ def rxcadre_main(args):
                 print('Start time must be less than end time')
                 sys.exit()
 
+            all_plots = rx.get_plot_data()
+            plot_dict = dict(zip([p[0] for p in all_plots], [p[2] for p in all_plots]))
             plots = args.plots
+            for plot in plots:
+                try:
+                    plot_dict[plot]
+                except KeyError:
+                    print("Invalid plot specified")
+                    sys.exit(1)
+
             if not plots:
-                plots = [p[0] for p in rx.get_plot_data()]
+                plots = [p[0] for p in all_plots]
             #
             # If we are showing plots, limit it to one plot
             #
-            if args.show_only:
-                plots = plots[:1]
+            show = args.show_only
+            if show:
+                #plots = plots[:1]
+                pass
             for plot in plots:
-                data = rx.extract_obs_data('cup_vane_obs', plot, start, end)
+                if plot_dict[plot] == 'FBP':
+                    data = rx.extract_obs_data('fbp_obs', plot, start, end)
+                elif plot_dict[plot] == 'WIND':
+                    data = rx.extract_obs_data('cup_vane_obs', plot, start, end)
                 if not data:
                     if not quiet:
                         print('Plot %s does not exist' % plot)
                     sys.exit(1)
-                #old_data = [None, data['timestamp'], data['speed'],
-                #            data['direction'], data['gust']]
-                if args.timeseries:
-                    rx.create_time_series_image(data, 'Test', start, end,
-                                                None, '')
+                if args.timeseries or args.kmz:
+                    if show:
+                        rx.create_time_series_image(data, plot, start, end)
+                    else:
+                        rx.create_time_series_image(data, plot, start, end,
+                                                    plot + '_ts.png')
+                if args.rose or args.kmz:
+                    if show:
+                        rx.create_windrose(data, plot, start, end)
+                    else:
+                        rx.create_windrose(data, plot, start, end,
+                                           plot + '_wr.png')
+                if args.kmz:
+                    if plot_dict[plot] == 'WIND':
+                        rx.create_kmz(plot, plot + '.kmz', None, start, end,
+                                      plot + '_ts.png', plot + '_wr.png', data)
+                    else:
+                        rx.create_kmz(plot, plot + '.kmz', None, start, end,
+                                      plot + '_ts.png', '', data)
+
+
 
 if __name__ == "__main__":
     '''
@@ -1187,8 +1255,6 @@ if __name__ == "__main__":
                                 help='Show the images, don\'t write a file')
     parser_extract.add_argument('--path', type=str, default='.',
                                 help='Output file path')
-    parser_extract.add_argument('--base-name', type=str, default='',
-                                help='Base filename for output(prepend)')
     #parser_extract.add_argument('--zip', dest='zip', action='store_true',
     #                            help='Create a zip file for all output')
 
@@ -1204,7 +1270,7 @@ if __name__ == "__main__":
                              help='Show events tables in a database')
     parser_info.add_argument('--plots', dest='show_plots',
                              action='store_true',
-                             help='Show events tables in a database')
+                             help='Show plot information in a database')
 
     '''
     Edit parser.
