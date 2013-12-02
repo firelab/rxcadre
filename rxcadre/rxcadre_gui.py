@@ -47,6 +47,7 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
     def __init__(self,parent):
         
         wx_rxcadre_gui.GUI_test2.__init__(self,parent)
+        _Rx = None
 
     def RxCadreIOError(self, message):
         dialog = wx.MessageDialog(None, message, 'Error',wx.OK | wx.ICON_ERROR)
@@ -78,22 +79,24 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
                     
         self.start_date.SetValue(min_date)
         self.stop_date.SetValue(max_date)
-        min_time = min[1].split(":")
-        max_time = max[1].split(":")
-        self.start_hour.SetSelection(int(min_time[0])%12 - 1)
-        self.start_minute.SetSelection(int(min_time[1]))
-        self.start_second.SetSelection(int(min_time[2]))
-        if (int(min_time[0]) >  12):
-            self.start_ampm.SetSelection(1)
-        else:
-            self.start_ampm.SetSelection(0)
-        self.end_hour.SetSelection(int(max_time[0])%12 - 1)
-        self.end_minute.SetSelection(int(max_time[1]) )
-        self.end_second.SetSelection(int(max_time[2]))
-        if (int(max_time[0]) >  12):
-            self.end_ampm.SetSelection(1)
-        else:
-            self.end_ampm.SetSelection(0)
+        self.start_hour.SetValue(min[1])
+        self.end_hour.SetValue(max[1])
+        #min_time = min[1].split(":")
+        #max_time = max[1].split(":")
+        #self.start_hour.SetSelection(int(min_time[0])%12 - 1)
+        #self.start_minute.SetSelection(int(min_time[1]))
+        #self.start_second.SetSelection(int(min_time[2]))
+        #if (int(min_time[0]) >  12):
+        #    self.start_ampm.SetSelection(1)
+        #else:
+        #    self.start_ampm.SetSelection(0)
+        #self.end_hour.SetSelection(int(max_time[0])%12 - 1)
+        #self.end_minute.SetSelection(int(max_time[1]) )
+        #self.end_second.SetSelection(int(max_time[2]))
+        #if (int(max_time[0]) >  12):
+        #    self.end_ampm.SetSelection(1)
+        #else:
+        #    self.end_ampm.SetSelection(0)
 
     def open_msg(self,event):
     
@@ -109,7 +112,7 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
             if RxCadre().check_valid_db(db) == False:
                 self.RxCadreIOError('The selected database appears to be in the wrong format. Please make sure you selected a valid database.')
             else:
-                self.db_picker.SetLabel(os.path.split(name)[-1])
+                self.db_picker.SetValue(os.path.split(name)[-1])
                 print name
                 self.db = name
                 self.change_tables()
@@ -127,13 +130,13 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         dialog.Destroy()
         RxCadre().init_new_db(os.path.join(dir,name))
         self.db = os.path.join(dir,name)
-        self.db_picker.SetLabel(name)
+        self.db_picker.SetValue(name)
         self.change_tables()
 
 
     def change_picker(self, event):
         name = self.db
-        table = self.combo.GetLabel()
+        table = self.combo.GetStringSelection()
         plots_new = RxCadre().change_picker(name, table)
         self.m_choice17.Clear()
         for p in plots_new:
@@ -143,7 +146,7 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         self.set_time(min,max)
 
     def import_data2(self,event):
-        if self.db_picker.GetLabel() == "":
+        if self.db_picker.GetValue() == "":
             self.RxCadreIOError('Please select a database')
         else:
             name = self.db
@@ -182,20 +185,22 @@ time, date, plotID, wind speed, wind direction and wind gust column
         if os.path.splitext(name)[-1] != req_ext:
             name = name + req_ext
         db = sqlite3.connect(name)
-            
+
         cursor = db.cursor()
-            
-        if (self.combo.GetLabel() == ""):
+
+        if (self.combo.GetStringSelection() == ""):
             self.RxCadreIOError('Please select a data table')
         else:
 
-            if (self.combo.GetLabel() != ""):
-                title = self.combo.GetLabel()
-                
-                
+            title = self.combo.GetStringSelection()
+
             if (self.event_combo.GetLabel() == ""):
-                begin = self.start_date.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
-                stop = self.stop_date.GetLabel() + " "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
+                beg_date = self.start_date.GetValue().Format('%m/%d/%Y')
+                end_date = self.stop_date.GetValue().Format('%m/%d/%Y')
+                begin = ' '.join([beg_date, self.start_hour.GetValue()])
+                stop = ' '.join([end_date, self.end_hour.GetValue()])
+                #begin = self.start_date.GetLabel()+" "+self.start_hour.GetLabel()+":"+self.start_minute.GetLabel()+":"+self.start_second.GetLabel()+" "+self.start_ampm.GetLabel()
+                #stop = self.stop_date.GetLabel() + " "+self.end_hour.GetLabel()+":"+self.end_minute.GetLabel()+":"+self.end_second.GetLabel()+" "+self.end_ampm.GetLabel()
             if (self.event_combo.GetLabel() != ""):
                 name = self.event_combo.GetLabel()
                 sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"
@@ -218,17 +223,13 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 self.RxCadreIOError('This table already exists in this database')
             else:
 
-                event_vals =  "RxCadre",self.file_name.GetLabel(),begin,stop
-                cursor.execute("INSERT INTO event VALUES (?,?,?,?)",event_vals)
-                    
-                self.start = datetime.datetime.strptime(begin, '%m/%d/%Y %I:%M:%S %p')
-                self.end = datetime.datetime.strptime(stop, '%m/%d/%Y %I:%M:%S %p')
+                self.start = datetime.datetime.strptime(begin, '%m/%d/%Y %H:%M:%S')
+                self.end = datetime.datetime.strptime(stop, '%m/%d/%Y %H:%M:%S')
                 if self.start == self.end:
                     self.RxCadreIOError('Please select two different times')
                 else:
-                    data = RxCadre().fetch_point_data(self.m_choice17.GetLabel(),title,self.start,self.end,db)
-                    pngfile = RxCadre().create_time_series_image(data, self.m_choice17.GetLabel(),self.start,self.end,db,
-                                                                 os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png')
+                    data = RxCadre().fetch_point_data(self.m_choice17.GetStringSelection(),title,self.start,self.end,db)
+                    pngfile = RxCadre().create_time_series_image(data, self.m_choice17.GetLabel(),self.start,self.end,db, os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png')
                     rosefile = RxCadre().create_windrose(data, self.m_choice17.GetLabel(),self.start,self.end,
                                                          os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel()) + '_rose.png',db)
 

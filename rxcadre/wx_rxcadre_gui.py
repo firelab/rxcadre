@@ -39,6 +39,7 @@
 
 
 import wx
+import wx.lib.masked.timectrl as wxtc
 import os
 #This file controls the architecture of the GUI.  
 
@@ -94,25 +95,26 @@ class GUI_test2 ( wx.Frame ):
         self.m_staticText7.Wrap( -1 )
         bSizer9.Add( self.m_staticText7, 0, wx.ALL, 5 )
         
-        start_hourChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
-        self.start_hour = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_hourChoices, 0 )
-        self.start_hour.SetSelection( 0 )
+        self.start_hour = wxtc.TimeCtrl(self, wx.ID_ANY, fmt24hr=True)
+        #start_hourChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
+        #self.start_hour = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_hourChoices, 0 )
+        #self.start_hour.SetSelection( 0 )
         bSizer9.Add( self.start_hour, 0, wx.ALL, 5 )
         
-        start_minuteChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
-        self.start_minute = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_minuteChoices, 0 )
-        self.start_minute.SetSelection( 0 )
-        bSizer9.Add( self.start_minute, 0, wx.ALL, 5 )
+        #start_minuteChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
+        #self.start_minute = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_minuteChoices, 0 )
+        #self.start_minute.SetSelection( 0 )
+        #bSizer9.Add( self.start_minute, 0, wx.ALL, 5 )
         
-        start_secondChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
-        self.start_second = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_secondChoices, 0 )
-        self.start_second.SetSelection( 0 )
-        bSizer9.Add( self.start_second, 0, wx.ALL, 5 )
+        #start_secondChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
+        #self.start_second = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_secondChoices, 0 )
+        #self.start_second.SetSelection( 0 )
+        #bSizer9.Add( self.start_second, 0, wx.ALL, 5 )
         
-        start_ampmChoices = [ u"AM", u"PM" ]
-        self.start_ampm = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_ampmChoices, 0 )
-        self.start_ampm.SetSelection( 0 )
-        bSizer9.Add( self.start_ampm, 0, wx.ALL, 5 )
+        #start_ampmChoices = [ u"AM", u"PM" ]
+        #self.start_ampm = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, start_ampmChoices, 0 )
+        #self.start_ampm.SetSelection( 0 )
+        #bSizer9.Add( self.start_ampm, 0, wx.ALL, 5 )
         
         self.m_staticText13 = wx.StaticText( self, wx.ID_ANY, u"             Use the timeframe of existing event:", wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText13.Wrap( -1 )
@@ -137,25 +139,26 @@ class GUI_test2 ( wx.Frame ):
         self.m_staticText8.Wrap( -1 )
         bSizer10.Add( self.m_staticText8, 0, wx.ALL, 5 )
         
-        end_hourChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
-        self.end_hour = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_hourChoices, 0 )
-        self.end_hour.SetSelection( 0 )
+        self.end_hour = wxtc.TimeCtrl(self, wx.ID_ANY, fmt24hr=True)
+        #end_hourChoices = [ u"1", u"2", u"3", u"4", u"5", u"6", u"7", u"8", u"9", u"10", u"11", u"12" ]
+        #self.end_hour = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_hourChoices, 0 )
+        #self.end_hour.SetSelection( 0 )
         bSizer10.Add( self.end_hour, 0, wx.ALL, 5 )
         
-        end_minuteChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
-        self.end_minute = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_minuteChoices, 0 )
-        self.end_minute.SetSelection( 0 )
-        bSizer10.Add( self.end_minute, 0, wx.ALL, 5 )
+        #end_minuteChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
+        #self.end_minute = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_minuteChoices, 0 )
+        #self.end_minute.SetSelection( 0 )
+        #bSizer10.Add( self.end_minute, 0, wx.ALL, 5 )
         
-        end_secondChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
-        self.end_second = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_secondChoices, 0 )
-        self.end_second.SetSelection( 0 )
-        bSizer10.Add( self.end_second, 0, wx.ALL, 5 )
+        #end_secondChoices = [ u"00", u"01", u"02", u"03", u"04", u"05", u"06", u"07", u"08", u"09", u"10", u"11", u"12", u"13", u"14", u"15", u"16", u"17", u"18", u"19", u"20", u"21", u"22", u"23", u"24", u"25", u"26", u"27", u"28", u"29", u"30", u"31", u"32", u"33", u"34", u"35", u"36", u"37", u"38", u"39", u"40", u"41", u"42", u"43", u"44", u"45", u"46", u"47", u"48", u"49", u"50", u"51", u"52", u"53", u"54", u"55", u"56", u"57", u"58", u"59" ]
+        #self.end_second = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_secondChoices, 0 )
+        #self.end_second.SetSelection( 0 )
+        #bSizer10.Add( self.end_second, 0, wx.ALL, 5 )
         
-        end_ampmChoices = [ u"AM", u"PM" ]
-        self.end_ampm = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_ampmChoices, 0 )
-        self.end_ampm.SetSelection( 0 )
-        bSizer10.Add( self.end_ampm, 0, wx.ALL, 5 )
+        #end_ampmChoices = [ u"AM", u"PM" ]
+        #self.end_ampm = wx.Choice( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, end_ampmChoices, 0 )
+        #self.end_ampm.SetSelection( 0 )
+        #bSizer10.Add( self.end_ampm, 0, wx.ALL, 5 )
         
         bSizer6.Add( bSizer10, 0, wx.EXPAND, 5 )
         
