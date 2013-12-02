@@ -45,9 +45,8 @@ from rxcadre import *
 class MakeFrame(wx_rxcadre_gui.GUI_test2):
 
     def __init__(self,parent):
-        
+
         wx_rxcadre_gui.GUI_test2.__init__(self,parent)
-        _Rx = None
 
     def RxCadreIOError(self, message):
         dialog = wx.MessageDialog(None, message, 'Error',wx.OK | wx.ICON_ERROR)
@@ -99,9 +98,9 @@ class MakeFrame(wx_rxcadre_gui.GUI_test2):
         #    self.end_ampm.SetSelection(0)
 
     def open_msg(self,event):
-    
+
         file_path = os.path.abspath("")
-        
+
         dialog = wx.FileDialog(None, message = "Choose a database:",defaultDir = file_path,style=wx.FD_DEFAULT_STYLE)
         if dialog.ShowModal() == wx.ID_OK:
             req_ext = '.db'
@@ -228,18 +227,18 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 if self.start == self.end:
                     self.RxCadreIOError('Please select two different times')
                 else:
-                    data = RxCadre().fetch_point_data(self.m_choice17.GetStringSelection(),title,self.start,self.end,db)
-                    pngfile = RxCadre().create_time_series_image(data, self.m_choice17.GetLabel(),self.start,self.end,db, os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png')
+                    data = RxCadre(self.db).extract_obs_data(self.m_choice17.GetStringSelection(),title,self.start,self.end)
+                    pngfile = RxCadre().create_time_series_image(data, self.m_choice17.GetLabel(),self.start,self.end, os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png')
                     rosefile = RxCadre().create_windrose(data, self.m_choice17.GetLabel(),self.start,self.end,
-                                                         os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel()) + '_rose.png',db)
+                                                         os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel()) + '_rose.png')
 
                     if self.m_checkBox5.GetValue() == True:
                         kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),
                                                    title,self.start,self.end,os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+
-                                                   '_time.png',os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_rose.png',data,db)
+                                                   '_time.png',os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_rose.png',data)
                     if self.m_checkBox6.GetValue() == True:
                         RxCadre().create_field_kmz(os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,
-                                                   self.m_choice17.GetLabel(),os.path.dirname(fname),db)
+                                                   self.m_choice17.GetLabel(),os.path.dirname(fname))
                     if self.m_checkBox7.GetValue() == True:
                         RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,data,db)
 

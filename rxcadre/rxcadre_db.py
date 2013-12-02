@@ -410,6 +410,11 @@ class RxCadreDb():
         runs through and opens any/all csv file and does a very simple header
         check.  Import data is assumed to be constant schema.
 
+        The plot name is extracted from the csv file name, the format of:
+
+        %p_final_%instr.csv is assumed where %p represents the fire/event plot
+        and the %instr is the instrument id (ie S8_final_4.csv).
+
         If the path is only on csv file, import that.
 
         Time is in 2 columns, 1 and 2 as Date and then time
@@ -443,10 +448,12 @@ class RxCadreDb():
             self._cursor.execute('PRAGMA journal_mode=OFF')
 
         sql = 'INSERT INTO fbp_obs VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        plot = 'S8-11'
         h = True
         for csv in csv_files:
             print(csv)
+            plot = os.path.splitext(os.path.basename(csv))[0]
+            plot = '-'.join([plot[:plot.find('_')], plot[:plot.rfind('_')] + 1])
+            plot = plot.uppercase()
             self._cursor.execute('BEGIN')
             fin = open(csv)
             for line in fin:

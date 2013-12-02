@@ -252,7 +252,7 @@ class RxCadre:
         min_time = str(min_time[0])
         min_time = min_time.replace("'","")
         return min_time
-    
+
     def get_max_time(self,name,table):
         db = sqlite3.connect(name)
         cursor = db.cursor()
@@ -265,7 +265,7 @@ class RxCadre:
 
 
     def change_tables(self,name):
-        '''"
+        '''
         I change the values of the table to only those that are present in the
         selected database.
         '''
@@ -465,8 +465,8 @@ class RxCadre:
 
         cursor = db.cursor()
         sql = '''SELECT * FROM '''+table+'''
-                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
-                           AND ?'''
+                          WHERE plot_id=? AND timestamp BETWEEN datetime(?)
+                           AND datetime(?)'''
         #Note to self: removed quality tab from this.  may want to keep it
         cursor.execute(sql, (plot,_export_date(start),_export_date(end)))
         results = cursor.fetchall()
@@ -1055,6 +1055,59 @@ time, date, plotID, wind speed, wind direction and wind gust column
             db.close()
             p = "Data imported successfully"
 
+    def bulk_extract(self, plots, start, end, out_path='.',
+                                              field_kmz='',
+                                              timeseries='',
+                                              windrose='',
+                                              ogr='',
+                                              csv=''):
+        all_plots = self.get_plot_data()
+        plot_dict = dict(zip([p[0] for p in all_plots], [p[2] for p in all_plots]))
+        plots = args.plots
+        for plot in plots:
+            try:
+                plot_dict[plot]
+            except keyerror:
+                print("invalid plot specified")
+                sys.exit(1)
+
+        if not plots:
+            plots = [p[0] for p in all_plots]
+        #
+        # if we are showing plots, limit it to one plot
+        #
+        show = args.show_only
+        if show:
+            #plots = plots[:1]
+            pass
+        for plot in plots:
+            if plot_dict[plot] == 'FBP':
+                data = self.extract_obs_data('fbp_obs', plot, start, end)
+            elif plot_dict[plot] == 'WIND':
+                data = self.extract_obs_data('cup_vane_obs', plot, start, end)
+            if not data:
+                if not quiet:
+                    print('Plot %s does not exist' % plot)
+                sys.exit(1)
+            if args.timeseries or args.kmz:
+                if show:
+                    self.create_time_series_image(data, plot, start, end)
+                else:
+                    self.create_time_series_image(data, plot, start, end,
+                                                plot + '_ts.png')
+            if args.rose or args.kmz:
+                if show:
+                    self.create_windrose(data, plot, start, end)
+                else:
+                    self.create_windrose(data, plot, start, end,
+                                       plot + '_wr.png')
+            if args.kmz:
+                if plot_dict[plot] == 'WIND':
+                    self.create_kmz(plot, plot + '.kmz', None, start, end,
+                                  plot + '_ts.png', plot + '_wr.png', data)
+                else:
+                    self.create_kmz(plot, plot + '.kmz', None, start, end,
+                                  plot + '_ts.png', '', data)
 
 def rxcadre_main(args):
     '''
