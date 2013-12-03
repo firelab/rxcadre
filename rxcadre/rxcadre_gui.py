@@ -227,40 +227,40 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 if self.start == self.end:
                     self.RxCadreIOError('Please select two different times')
                 else:
-                    data = RxCadre(self.db).extract_obs_data(self.m_choice17.GetStringSelection(),title,self.start,self.end)
-                    pngfile = RxCadre().create_time_series_image(data, self.m_choice17.GetLabel(),self.start,self.end, os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png')
-                    rosefile = RxCadre().create_windrose(data, self.m_choice17.GetLabel(),self.start,self.end,
-                                                         os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel()) + '_rose.png')
+                    tbl = self.m_choice17.GetStringSelection()
+                    data = RxCadre(self.db).extract_obs_data(title, tbl,self.start,self.end)
+                    pngfile = RxCadre().create_time_series_image(data, tbl,self.start,self.end, os.path.join(os.path.dirname(fname),tbl)+ '_time.png')
+                    rosefile = RxCadre().create_windrose(data, tbl,self.start,self.end, os.path.join(os.path.dirname(fname),tbl) + '_rose.png')
 
                     if self.m_checkBox5.GetValue() == True:
-                        kmz = RxCadre().create_kmz(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),
-                                                   title,self.start,self.end,os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+
-                                                   '_time.png',os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_rose.png',data)
+                        kmz = RxCadre().create_kmz(tbl,os.path.join(os.path.dirname(fname),self.file_name.GetValue()), title,self.start,self.end,os.path.join(os.path.dirname(fname),tbl)+ '_time.png',os.path.join(os.path.dirname(fname),tbl)+ '_rose.png',data)
                     if self.m_checkBox6.GetValue() == True:
-                        RxCadre().create_field_kmz(os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,
-                                                   self.m_choice17.GetLabel(),os.path.dirname(fname))
+                        RxCadre().create_field_kmz(os.path.join(os.path.dirname(fname),self.file_name.GetValue()),title,self.start,self.end,
+                                tbl,os.path.dirname(fname), db)
                     if self.m_checkBox7.GetValue() == True:
-                        RxCadre().create_csv(self.m_choice17.GetLabel(),os.path.join(os.path.dirname(fname),self.file_name.GetLabel()),title,self.start,self.end,data,db)
+                        RxCadre().create_csv(tbl,os.path.join(os.path.dirname(fname),self.file_name.GetValue()),title,self.start,self.end,data,db)
 
                     if self.m_checkBox8.GetValue() == True:
-                        RxCadre().create_ogr(os.path.dirname(fname),title,self.file_name.GetLabel(),self.start,self.end,db)
+                        RxCadre().create_ogr(os.path.dirname(fname),title,self.file_name.GetValue(),self.start,self.end,db)
 
-                    self.bmp = wx.Image(os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-                    self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
+                    self.bmp = wx.Image(os.path.join(os.path.dirname(fname),tbl)+ '_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                    #self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
+                    self.plot_rose.SetBitmap(self.bmp)
                     
 
 
-                    self.bmp2 = wx.Image(os.path.join(os.path.dirname(fname),self.m_choice17.GetLabel())+ '_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-                    self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
-                    self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
+                    self.bmp2 = wx.Image(os.path.join(os.path.dirname(fname),tbl)+ '_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+                    #self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
+                    #self.plot_time.SetSize(self.bmp2.bitmap.GetSize())
+                    self.plot_time.SetBitmap(self.bmp2)
 
 
                     self.plot_time.Refresh()
                     self.plot_rose.Refresh()
 
                     if self.m_checkBox9.GetValue() == False:
-                        os.remove(os.path.join(os.path.dirname(fname), self.m_choice17.GetLabel()+'_time.png'))
-                        os.remove(os.path.join(os.path.dirname(fname), self.m_choice17.GetLabel()+'_rose.png'))
+                        os.remove(os.path.join(os.path.dirname(fname), tbl +'_time.png'))
+                        os.remove(os.path.join(os.path.dirname(fname), tbl +'_rose.png'))
                     
                     sql = "SELECT event_name FROM event"
                     cursor.execute(sql)

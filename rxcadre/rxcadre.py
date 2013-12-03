@@ -517,7 +517,7 @@ class RxCadre:
         if type(data) == str:
             cursor = db.cursor()
 
-            sql = "SELECT plot_id_table,timestamp,speed,direction,gust FROM "+data+" WHERE plot_id_table = '"+plot+"'"
+            sql = "SELECT plot_id,timestamp,speed,direction,gust FROM "+data+" WHERE plot_id= '"+plot+"'"
 
             cursor.execute(sql)
             data = cursor.fetchall()
@@ -670,7 +670,7 @@ class RxCadre:
         if type(data) == str:
             cursor = db.cursor()
             sql = """SELECT * FROM """+data+"""
-                          WHERE plot_id_table=? AND timestamp BETWEEN ? 
+                          WHERE plot_id=? AND timestamp BETWEEN ? 
                            AND ?"""
             #Note to self: removed quality tab from this.  may want to keep it
             cursor.execute(sql, (plt_title,_export_date(start),_export_date(end)))
@@ -759,7 +759,7 @@ class RxCadre:
         '''
 
         cursor = db.cursor()
-        sql = '''SELECT DISTINCT(plot_id_table) FROM '''+table+'''
+        sql = '''SELECT DISTINCT(plot_id) FROM '''+table+'''
                    WHERE timestamp BETWEEN ? AND ?'''
         cursor.execute(sql, (start, end))
         plots = [c[0] for c in cursor.fetchall()]
@@ -854,7 +854,7 @@ class RxCadre:
         in the html bubble as well.
         '''
         cursor = db.cursor()
-        sql = '''SELECT DISTINCT(plot_id_table) FROM '''+table+'''
+        sql = '''SELECT DISTINCT(plot_id) FROM '''+table+'''
                    WHERE timestamp BETWEEN ? AND ?'''
         cursor.execute(sql, (start, end))
 
@@ -871,7 +871,7 @@ class RxCadre:
                 filename = plot
             if filename[-4:] != '.kmz':
                 filename = filename + '.kmz'
-            
+
             data = self.fetch_point_data(plot,table,start,end,db)
             if not data:
                 continue
@@ -1008,7 +1008,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
 
         else:
 
-            cursor.execute("CREATE TABLE "+hold_name+'''(plot_id_table TEXT,
+            cursor.execute("CREATE TABLE "+hold_name+'''(plot_id TEXT,
                                                         timestamp DATETIME, speed TEXT,
                                                         direction TEXT, gust TEXT)''')
 
@@ -1085,10 +1085,10 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 data = self.extract_obs_data('fbp_obs', plot, start, end)
             elif plot_dict[plot] == 'WIND':
                 data = self.extract_obs_data('cup_vane_obs', plot, start, end)
-            if not data:
+            if not data['timestamp']:
                 if not quiet:
                     print('Plot %s does not exist' % plot)
-                sys.exit(1)
+                continue
             if args.timeseries or args.kmz:
                 if show:
                     self.create_time_series_image(data, plot, start, end)
