@@ -44,6 +44,7 @@ about what to display.
 '''
 
 import argparse
+from collections import OrderedDict as dict
 import datetime
 import logging
 import math
@@ -233,7 +234,7 @@ class RxCadre:
     def event_time(self,name):
         if name[-3:] != '.db':
             name = name + '.db'
-        db = sqlite3.connect(name)    
+        db = sqlite3.connect(name)
         cursor = db.cursor()
         sql = "SELECT event_start,event_end FROM event WHERE event_name = '"+name+"'"
         cursor.execute(sql)
@@ -1208,8 +1209,11 @@ def rxcadre_main(args):
             #
             show = args.show_only
             if show:
-                #plots = plots[:1]
+                plots = plots[:1]
                 pass
+            if args.csv:
+                csv_out = open('out.csv', 'w')
+                header_written = False
             for plot in plots:
                 if plot_dict[plot] == 'FBP':
                     data = rx.extract_obs_data('fbp_obs', plot, start, end)
@@ -1238,7 +1242,8 @@ def rxcadre_main(args):
                     else:
                         rx.create_kmz(plot, plot + '.kmz', None, start, end,
                                       plot + '_ts.png', '', data)
-
+                if args.csv:
+                    print(type(data))
 
 
 if __name__ == "__main__":
@@ -1285,6 +1290,8 @@ if __name__ == "__main__":
     parser_extract.add_argument('--plots', dest='plots', type=str,
                                 nargs='*', default=[],
                                 help='Plot names to extract')
+    parser_extract.add_argument('--plot-type', dest='plot_type', type=str,
+                                default='', help='WIND or FBP')
     parser_extract.add_argument('--start', dest='start', type=str,
                                 default=None, help='Start time for subset')
     parser_extract.add_argument('--end', dest='end', type=str,
