@@ -426,7 +426,10 @@ class RxCadre:
             sql = "SELECT plot_id, geometry, plot_type from plot_location"
             self.cur.execute(sql)
         else:
-            sql = "SELECT plot_id, geometry, plot_type from plot_location WHERE plot_id=?"
+            sql = '''
+                  SELECT plot_id, geometry, x, y, plot_type FROM
+                  plot_location WHERE plot_id=?
+                  '''
             self.cur.execute(sql, (plot_name,))
         plots = []
         for row in self.cur.fetchall():
@@ -1063,7 +1066,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
                                               ogr='',
                                               csv=''):
         all_plots = self.get_plot_data()
-        plot_dict = dict(zip([p[0] for p in all_plots], [p[2] for p in all_plots]))
+        plot_dict = dict(zip([p[0] for p in all_plots], [p[4] for p in all_plots]))
         plots = args.plots
         for plot in plots:
             try:

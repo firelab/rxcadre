@@ -36,10 +36,11 @@
 #
 ###############################################################################
 '''
-Output creator for different plot types
+Output creator for different data types
 '''
 
 from collections import OrderedDict as dict
+from datetime import datetime
 import os
 import sys
 
@@ -47,100 +48,128 @@ import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 
 import numpy as np
-import scipy.stats as stats
-
+from scipy.stats import morestats
 
 sys.path.append(os.path.abspath('windrose'))
 import windrose
 
 
-class RxCadreOutput:
+class RxCadreOutput(object):
     '''
     Interface for outputs, with default exporters.
     '''
 
-    def __init__(self):
+    def __init__(self, plot, data):
         '''
         Don't do anything.
         '''
-        #FIXME: add data/stats cache?
-        self.plot_type = ''
+        self.plot = plot
+        self.data = data
+        self.calc_stats()
+        self.frmt_time()
 
-    def export_csv_header(self, data):
+
+    @property
+    def plot_name(self):
+        '''
+        Plot name
+        '''
+        return self.plot[0]
+
+
+    @property
+    def plot_x(self):
+        '''
+        Plot x coordinate
+        '''
+        return float(self.plot[2])
+
+
+    @property
+    def plot_y(self):
+        '''
+        Plot y coordinate
+        '''
+        return float(self.plot[3])
+
+
+    def export_csv_header(self):
         '''
         Default header string.
         '''
-        header = ','.join(['"' + col + '"' for col in data.keys()])
+        header = '"plot_id",'
+        header += ','.join(['"' + col + '"' for col in self.data.keys()])
         header += '\n'
         return header
 
 
-    def export_csv(self, plot, data):
+    def export_csv(self):
         '''
         Export data as csv.
         '''
         csv = ''
-        for i, times in enumerate(data['timestamp']):
-            csv += plot + ',' + times + ','
-            csv += ','.join([str(data[k][i]) for k in data.keys() \
+        for i, times in enumerate(self.data['timestamp']):
+            csv += ','.join([self.plot_name, datetime.
+                                        strftime(times, '%Y-%m-%d %H:%M:%S')])
+            csv += ','
+            csv += ','.join([str(self.data[k][i]) for k in self.data.keys() \
                              if k != 'timestamp'])
             csv += '\n'
         return csv
 
 
-    def export_ogr(self, plot, data):
+    def export_ogr(self):
         '''
         Write a ogr features for the point
         '''
         pass
 
 
-    def calc_stats(self, data):
+    def calc_stats(self):
         '''
         Calculate normal statistics
         '''
-        stat = dict()
-        for key, val in data.items():
-            stat[key] = dict()
+
+        self.stat = dict()
+        for key, val in self.data.items():
+            self.stat[key] = dict()
             if key == 'timestamp':
                 continue
             samples = np.array(val)
-            stat[key]['min'] = np.min(samples)
-            stat[key]['max'] = np.max(samples)
-            stat[key]['mean'] = np.mean(samples)
-            stat[key]['stddev'] = np.std(samples)
-        return stat
+            self.stat[key]['min'] = np.min(samples)
+            self.stat[key]['max'] = np.max(samples)
+            self.stat[key]['mean'] = np.mean(samples)
+            self.stat[key]['stddev'] = np.std(samples)
 
 
-    def export_kml(self, plot, data, images):
+    def export_kml(self, images):
         '''
         Export the kml for a single plot.
         '''
-        stat = self.calc_stats(data)
         try:
-            rot = stat['direction']['mean']
+            rot = self.stat['direction']['mean']
         except:
             rot = 0.0
         kml =               '  <Placemark>\n'
         kml += self.export_kml_icon(rot)
         kml +=              '    <Point>\n' \
                             '      <coordinates>%.9f,%.9f,0</coordinates>\n' \
-                            '    </Point>\n'# % (lon, lat)
+                            '    </Point>\n' % (self.plot_x, self.plot_y)
         kml = kml +         '    <name>%s</name>\n' \
                             '    <description>\n' \
-                            '      <![CDATA[\n' % plot
+                            '      <![CDATA[\n' % self.plot_name
         for image in images:
             kml = kml +     '        <img src = "%s" />\n'  % image
         kml = kml +         '        <table border="1">' \
                             '          <tr>\n' \
                             '            <th>Stats</th>\n' \
                             '          </tr>\n'
-        for key in stat.keys():
-            for i, sta in enumerate(stat[key]):
+        for key in self.stat.keys():
+            for key2 in self.stat[key]:
                 kml = kml + '          <tr>\n' \
                             '            <td>%s</td>\n' \
                             '            <td>%.2f</td>\n' \
-                            '          </tr>\n' % (key, stat[key][i])
+                            '          </tr>\n' % (key+key2, self.stat[key][key2])
         kml = kml +         '        </table>\n' \
                             '      ]]>\n' \
                             '    </description>\n' \
@@ -155,21 +184,24 @@ class RxCadreOutput:
         return ''
 
 
-    def export_timeseries(self, plot, data, filename=''):
+    def export_timeseries(self, filename=''):
         '''
         Create a time series image for the plot over the time span
         '''
         fig = plt.figure()
-        time = [mdates.date2num(d) for d in data['timestamp']]
+        time = [mdates.date2num(d) for d in self.data['timestamp']]
         i = 1
-        for key, val in data.items():
-            axis = fig.add_subplot(len(data.keys()) - 1, 2, i)
-            axis.plot_date(time, data[key])
+        for key, val in self.data.items():
+            axis = fig.add_subplot(len(self.data.keys()) - 1, 2, i)
+            axis.plot_date(time, self.data[key])
             i += 1
         fig.autofmt_xdate()
-        plt.suptitle('Plot %s from %s to %s' % (plot,
-                     data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
-                     data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
+        plt.suptitle('Plot %s from %s to %s' %
+                     (self.plot_name,
+                      self.data['timestamp'][0].
+                      strftime('%m/%d/%Y %I:%M:%S %p'),
+                      self.data['timestamp'][-1].
+                      strftime('%m/%d/%Y %I:%M:%S %p')))
         if not filename:
             plt.show()
             plt.close()
@@ -179,11 +211,22 @@ class RxCadreOutput:
         return filename
 
 
-    def export_summary_stats(self, plot, data, filename=''):
+    def export_summary_stats(self, filename=''):
         '''
         Default summary stats image.
         '''
         pass
+
+
+    def frmt_time(self):
+        '''
+        Convert the timestamp to a valid datetime.  This should be called after
+        the initial reading of the data (extract_obs_self.data) to handle timestamp
+        discrepencies.  The default assumes YYYY-MM-DD HH:MM:SS.
+        '''
+        self.data['timestamp'] = [datetime.strptime(timestamp,
+                                                    '%Y-%m-%d %H:%M:%S')
+                                  for timestamp in self.data['timestamp']]
 
 
 class RxCadreWindOutput(RxCadreOutput):
@@ -191,8 +234,8 @@ class RxCadreWindOutput(RxCadreOutput):
     Output stuff for wind based data.
     '''
 
-    def __init__(self):
-
+    def __init__(self, plot, data):
+        super(RxCadreWindOutput, self).__init__(plot=plot, data=data)
         self.plot_type = 'FBP'
 
 
@@ -211,18 +254,47 @@ class RxCadreWindOutput(RxCadreOutput):
                '    </Style>\n'
         return kml
 
-
-    def export_summary_stats(self, plot, data, filename=''):
+    def export_timeseries(self, filename):
         '''
-        Create a windrose from a dataset.
+        We handle the wind stuff slightly differently.
+        '''
+        fig = plt.figure()
+        time = [mdates.date2num(d) for d in self.data['timestamp']]
+
+        #fig = plt.figure(figsize=(8,8), dpi=80)
+        ax1 = fig.add_subplot(211)
+        ax1.plot_date(time, self.data['speed'], 'b-')
+        #ax1.plot_date(time, self.data['gust'], 'g-')
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Speed(mph)', color = 'b')
+        ax2 = fig.add_subplot(212)
+        ax2.plot_date(time, self.data['direction'], 'r.')
+        ax2.set_ylabel('Direction', color='r')
+
+        fig.autofmt_xdate()
+        plt.suptitle('Plot %s from %s to %s' % (self.plot_name,
+                     self.data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
+                     self.data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
+        if not filename:
+            plt.show()
+            plt.close()
+        else:
+            plt.savefig(filename)
+            plt.close()
+        return filename
+
+
+    def export_summary_stats(self, filename=''):
+        '''
+        Create a windrose from a self.dataset.
         '''
         #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
         fig = plt.figure(facecolor='w', edgecolor='w')
         rect = [0.1, 0.1, 0.8, 0.8]
         axis = windrose.WindroseAxes(fig, rect, axisbg='w')
         fig.add_axes(axis)
-        axis.bar(data['direction'], data['speed'], normed=True, opening=0.8,
-               edgecolor='white')
+        axis.bar(self.data['direction'], self.data['speed'], normed=True, 
+                 opening=0.8, edgecolor='white')
         #l = axis.legend(axespad=-0.10)
         leg = axis.legend(1.0)
         plt.setp(leg.get_texts(), fontsize=8)
@@ -235,18 +307,16 @@ class RxCadreWindOutput(RxCadreOutput):
         return filename
 
 
-    def calc_stats(self, data):
+    def calc_stats(self):
         '''
         Calculate wind stats
         '''
-        stat = dict()
-        stat = super.calc_stats(data)
-        samples = np.array(data['direction'])
-        stat['direction']['min'] = np.min(samples)
-        stat['direction']['max'] = np.max(samples)
-        stat['direction']['mean'] = stats.morestats.circmean(samples, 360, 0)
-        stat['direction']['stddev'] = stats.morestats.circstd(samples, 360, 0)
-        return stat
+        super(RxCadreWindOutput, self).calc_stats()
+        samples = np.array(self.data['direction'])
+        self.stat['direction']['min'] = np.min(samples)
+        self.stat['direction']['max'] = np.max(samples)
+        self.stat['direction']['mean'] = morestats.circmean(samples, 360, 0)
+        self.stat['direction']['stddev'] = morestats.circstd(samples, 360, 0)
 
 
 class RxCadreFBPOutput(RxCadreOutput):
@@ -254,26 +324,29 @@ class RxCadreFBPOutput(RxCadreOutput):
     Format and create outputs for Fire Behavior Packages.
     '''
 
-    def __init__(self):
+    def __init__(self, plot, data):
 
+        super(RxCadreFBPOutput, self).__init__(plot=plot, data=data)
         self.plot_type = 'FBP'
 
-    def export_timeseries(self, plot, data, filename=''):
+    def export_timeseries(self, filename=''):
         '''
         Create a time series image for the plot over the time span
         '''
         fig = plt.figure()
-        time = [mdates.date2num(d) for d in data['timestamp']]
+        time = [mdates.date2num(d) for d in self.data['timestamp']]
         i = 1
-        for key, val in data.items():
-            axis = fig.add_subplot(len(data.keys()), 2, i)
-            axis.plot_date(time, data[key])
+        for key, val in self.data.items():
+            axis = fig.add_subplot(len(self.data.keys()), 2, i)
+            axis.plot_date(time, self.data[key])
             i += 1
 
         fig.autofmt_xdate()
-        plt.suptitle('Plot %s from %s to %s' % (plot,
-                     data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
-                     data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
+        plt.suptitle('Plot %s from %s to %s' % (self.plot_name,
+                     self.data['timestamp'][0].
+                     strftime('%m/%d/%Y %I:%M:%S %p'),
+                     self.data['timestamp'][-1].
+                     strftime('%m/%d/%Y %I:%M:%S %p')))
         if not filename:
             plt.show()
             plt.close()
@@ -282,15 +355,22 @@ class RxCadreFBPOutput(RxCadreOutput):
             plt.close()
         return filename
 
+    def frmt_time(self):
+        '''
+        Handle the decimal seconds in the fbp self.data.
+        '''
+        self.data['timestamp'] = [datetime.strptime(timestamp,
+                                                    '%Y-%m-%d %H:%M:%S.%f')
+                             for timestamp in self.data['timestamp']]
 
-def rx_cadre_create_output(key):
+def rxcadre_create_output(key, plot, data):
     '''
     Factory for plot type.
     '''
-    if not key or key.uppercase() != 'FPB' or key.uppercase() != 'WIND':
+    if not key or (key.upper() != 'FPB' and key.upper() != 'WIND'):
         raise ValueError('Invalid key for output creator')
     if key == 'FBP':
-        return RxCadreFBPOutput()
+        return RxCadreFBPOutput(plot, data)
     else:
-        return RxCadreWindOutput()
+        return RxCadreWindOutput(plot, data)
 

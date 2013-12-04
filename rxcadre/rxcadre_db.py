@@ -39,7 +39,8 @@
 SQLite related class for storage of time series data
 '''
 
-import datetime
+from collections import OrderedDict as dict
+from datetime import datetime
 import logging
 import os
 import sqlite3
@@ -54,9 +55,9 @@ def _import_date(string):
     Parse a datetime from a UTC string
     '''
     try:
-        parsed = datetime.datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
+        parsed = datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
     except ValueError:
-        parsed = datetime.datetime.strptime(string, '%m/%d/%y %I:%M:%S %p')
+        parsed = datetime.strptime(string, '%m/%d/%y %I:%M:%S %p')
     return parsed
 
 def _extract_xy(wkt):
@@ -108,69 +109,76 @@ class RxCadreDb():
             self._dbase.close()
 
 
-    def init_new_db(self):
+    def init_new_db(self, fromsql=True):
+        """
         '''
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
         '''
-        stmts = open('../data/new_tables.sql').read().split(';')
-        for stmt in stmts:
-            self._cursor.execute(stmt)
-        """
         See data/*.sql for creation routines.
 
-        sql = '''CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
-                                            geometry TEXT, plot_type TEXT)'''
-        self._cursor.execute(sql)
-        sql = '''CREATE TABLE event(event_name TEXT NOT NULL,
-                                    event_start TEXT NOT NULL,
-                                    event_end TEXT NOT NULL,
-                                    PRIMARY KEY(project_name, event_name))'''
-        self._cursor.execute(sql)
-        sql = '''CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
-                                        table_display name TEXT,
-                                        timestamp_column TEXT NOT NULL,
-                                        obs_cols TEXT NOT NULL,
-                                        obs_col_names TEXT,
-                                        PRIMARY KEY(obs_table_name))
-              '''
-        self._cursor.execute(sql)
-        sql = '''CREATE_TABLE cup_vane_obs(plot_id TEXT NOT NULL,
-                                           timestamp TEXT NOT NULL,
-                                           direction REAL,
-                                           speed REAL,
-                                           gust REAL,
-                                           PRIMARY KEY(plot_id, timestamp)
-              '''
+       """
+        if fromsql:
+            stmts = open('../data/new_tables.sql').read().split(';')
+            for stmt in stmts:
+                self._cursor.execute(stmt)
+        else:
+            sql = '''
+                  CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
+                                             geometry TEXT, plot_type TEXT)
+                  '''
+            self._cursor.execute(sql)
+            sql = '''
+                  CREATE TABLE event(event_name TEXT NOT NULL,
+                                     event_start TEXT NOT NULL,
+                                     event_end TEXT NOT NULL,
+                                     PRIMARY KEY(project_name, event_name))
+                  '''
+            self._cursor.execute(sql)
+            sql = '''
+                  CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
+                                         table_display name TEXT,
+                                         timestamp_column TEXT NOT NULL,
+                                         obs_cols TEXT NOT NULL,
+                                         obs_col_names TEXT,
+                                         PRIMARY KEY(obs_table_name))
+                  '''
+            self._cursor.execute(sql)
+            sql = '''
+                  CREATE_TABLE cup_vane_obs(plot_id TEXT NOT NULL,
+                                            timestamp TEXT NOT NULL,
+                                            direction REAL,
+                                            speed REAL,
+                                            gust REAL,
+                                            PRIMARY KEY(plot_id, timestamp)
+                  '''
 
-        self._cursor.execute(sql)
-        sql = '''CREATE_TABLE fbp_obs(plot_id TEXT NOT NULL,
-                                           timestamp TEXT NOT NULL,
-                                           temperature REAL,
-                                           ks_v REAL,
-                                           ks_h REAL,
-                                           mt_t REAL,
-                                           mt_r REAL,
-                                           nar REAL,
-                                           PRIMARY KEY(plot_id, timestamp)
-              '''
+            self._cursor.execute(sql)
+            sql = '''
+                  CREATE_TABLE fbp_obs(plot_id TEXT NOT NULL,
+                                       timestamp TEXT NOT NULL,
+                                       temperature REAL,
+                                       ks_v REAL,
+                                       ks_h REAL,
+                                       mt_t REAL,
+                                       mt_r REAL,
+                                       nar REAL,
+                                       PRIMARY KEY(plot_id, timestamp)
+                  '''
 
-        self._cursor.execute(sql)
-        sql = 'INSERT INTO obs_table VALUES(?, ?, ?, ?, ?)'
-        self._cursor.execute(sql, ('cup_vane_obs', 'Wind Data', 'timestamp',
-                                   'direction,speed,gust',
-                                   'Direction,Speed,Gust')
-        self._cursor.execute(sql, ('fbp_obs', 'Fire Behavior Data',
-                                   'timestamp',
-                                   'temperature,ks_v,ks_h,mt_t,mt_r,nar'
-                                   'Temperature(C),Pressure Vertical,Pressure \
-                                   Horizontal,Medtherm Total, Medtherm \
-                                   Radiation,Narrow Angle \
-                                   Radiometer,speed,gust')
-                                   'Direction,Speed,Gust')
-        """
-
+            self._cursor.execute(sql)
+            sql = 'INSERT INTO obs_table VALUES(?, ?, ?, ?, ?)'
+            self._cursor.execute(sql, ('cup_vane_obs', 'Wind Data', 'timestamp',
+                                       'direction,speed,gust',
+                                       'Direction,Speed,Gust'))
+            self._cursor.execute(sql, ('fbp_obs', 'Fire Behavior Data',
+                                       'timestamp',
+                                       'temperature,ks_v,ks_h,mt_t,mt_r,nar'
+                                       'Temperature(C),Pressure Vertical,Pressure \
+                                       Horizontal,Medtherm Total, Medtherm \
+                                       Radiation,Narrow Angle \
+                                       Radiometer'))
         self._dbase.commit()
 
 
@@ -243,24 +251,35 @@ class RxCadreDb():
         return names
 
 
-    def get_event_data(self):
+    def get_event_data(self, event_name=None):
         '''
         Get the event names and the start, stop times for the events.
         '''
         sql = "SELECT event_name, event_start, event_end from event"
-        self._cursor.execute(sql)
+        if event_name:
+            sql += ' WHERE event_name=?'
+            self._cursor.execute(sql, (event_name,))
+        else:
+            self._cursor.execute(sql)
         events = dict()
         for row in self._cursor.fetchall():
             events[row[0]] = (row[1], row[2])
         return events
 
 
-    def get_plot_data(self):
+    def get_plot_data(self, plot_name=None):
         '''
         Get simple plot information.
         '''
-        sql = "SELECT plot_id, geometry from plot_location"
-        self._cursor.execute(sql)
+        if not plot_name:
+            sql = "SELECT plot_id, geometry, plot_type from plot_location"
+            self._cursor.execute(sql)
+        else:
+            sql = '''
+                  SELECT plot_id, geometry, x, y, plot_type FROM
+                  plot_location WHERE plot_id=?
+                  '''
+            self._cursor.execute(sql, (plot_name,))
         plots = []
         for row in self._cursor.fetchall():
             plots.append(list(row))
@@ -276,9 +295,7 @@ class RxCadreDb():
         row = self._cursor.fetchone()
         return _extract_xy(row[0])
 
-
-    def extract_obs_data(self, table_name, plot_name, start=None, end=None,
-                         cols=None):
+    def extract_obs_data(self, table_name, plot_name, start=None, end=None):
         '''
         Extract data from a table in obs_table for generating output.
 
@@ -294,14 +311,6 @@ class RxCadreDb():
         :param end: datetime representation of when to end data extraction,
                     if absent, use latest available timestamp.
 
-        :param cols: dictionary with keys representing names of columns to
-                     extract.  If absent, the metadata from obs_table (obs_cols
-                     and obs_col_names) will be used.  The values associated
-                     with the keys are human readable names for display.  If
-                     they are absent, obs_col_names is checked, and then the
-                     text in obs_cols is used.  If present, it the keys *must*
-                     be a subset of columns in the obs_tables/obs_cols values
-
         :return: A dictionary with keys of {obs_cols:obs_names} keys and lists
                  of values, ie:
 
@@ -312,31 +321,36 @@ class RxCadreDb():
         self._cursor.execute(sql, (table_name,))
         row = self._cursor.fetchone()
         if not row:
-            raise IOError('Table %s is not in obs_table' % table_name)
-        time_col = row[1]
-        geom_col = row[2]
+            raise ValueError('Table %s is not in obs_table' %
+                                          table_name)
+        time_col = row[2]
         obs_cols = [c.strip() for c in row[3].split(',')]
-        obs_names = [c.strip() for c in row[4].split(',')]
-        if cols:
-            if set(cols.keys()) > set(obs_cols):
-                raise ValueError('Invalid column requested')
-        col_def = ''
-        for i, col in enumerate(obs_cols):
-            col_def += '%s as %s' % (col, obs_names[i])
-            if i < len(obs_cols) -1:
-                col_def += ','
-        logging.debug('SQL as stmt: %s', col_def)
+        if not start:
+            sql = '''SELECT MIN(datetime(%s)) FROM %s
+                     WHERE plot_id=?''' % (time_col, table_name)
+            self._cursor.execute(sql, (plot_name,))
+            start = datetime.strptime(self._cursor.fetchone()[0],
+                                               '%Y-%m-%d %H:%M:%S')
+        if not end:
+            sql = '''SELECT MAX(datetime(%s)) FROM %s
+                     WHERE plot_id=?''' % (time_col, table_name)
+            self._cursor.execute(sql, (plot_name,))
+            end = datetime.strptime(self._cursor.fetchone()[0],
+                                             '%Y-%m-%d %H:%M:%S')
         sql = '''
-              SELECT %s as timestamp, %s FROM %s WHERE plot_id=?
-              ''' % (time_col, col_def, table_name)
-        #AND %s BETWEEN ? AND ?
-        print('Unbound sql: %s', sql)
-        self._cursor.execute(sql, (plot_name,))
+              SELECT %s as timestamp, %s FROM %s WHERE plot_id=? AND
+              datetime(%s) BETWEEN datetime(?) AND datetime(?)
+              ''' % (time_col, ','.join(obs_cols), table_name, time_col)
+
+        logging.debug('Unbound sql: %s', sql)
+        self._cursor.execute(sql, (plot_name, start, end))
 
         rows = self._cursor.fetchall()
 
         data = dict()
-        data['timestamp'] = [r[0] for r in rows]
+        # FIXME: Hack for different types of tables.
+        if 'direction' in set(obs_cols):
+            data['timestamp'] = [row[0] for row in rows]
         for i, col in enumerate(obs_cols):
             data[col] = [r[i+1] for r in rows]
 
@@ -433,9 +447,9 @@ class RxCadreDb():
             csv_files.append(path)
         else:
             for root, dirs, files in os.walk(path):
-                for file in files:
-                    if file.endswith(".csv"):
-                         csv_files.append(os.path.join(root, file))
+                for csv_file in files:
+                    if csv_file.endswith(".csv"):
+                        csv_files.append(os.path.join(root, file))
 
         if not csv_files:
             raise ValueError('Invalid path, no csv files found')
@@ -448,28 +462,26 @@ class RxCadreDb():
             self._cursor.execute('PRAGMA journal_mode=OFF')
 
         sql = 'INSERT INTO fbp_obs VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        h = True
+        header = True
         for csv in csv_files:
-            print(csv)
             plot = os.path.splitext(os.path.basename(csv))[0]
             plot = '-'.join([plot[:plot.find('_')], plot[:plot.rfind('_')] + 1])
             plot = plot.uppercase()
             self._cursor.execute('BEGIN')
             fin = open(csv)
             for line in fin:
-                if h:
-                    h = False
+                if header:
+                    header = False
                     continue
                 line = line.split(',')
                 date = line[1].strip().replace('/', '-')
                 time = line[2].strip()
-                dt = date + ' ' + time
-                if not dt.find('.') >= 0:
-                    dt += '.0'
+                timestamp = date + ' ' + time
+                if not timestamp.find('.') >= 0:
+                    timestamp += '.0'
                 else:
-                    dt = dt[:-2]
-                print dt
-                t = float(line[4])
+                    timestamp = timestamp[:-2]
+                temp = float(line[4])
                 mtt = float(line[5])
                 mtr = float(line[6])
                 ksv = float(line[27])
@@ -477,8 +489,12 @@ class RxCadreDb():
                 nar = float(line[7])
                 mth = float(line[29])
                 bat = float(line[31])
-                self._cursor.execute(sql, (plot, dt, t, mtt, mtr, ksv, ksh,
-                                           nar, mth, bat))
+                self._cursor.execute(sql, (plot, timestamp, temp, mtt, mtr,
+                                           ksv, ksh, nar, mth, bat))
+            if prog_func:
+                prog_func(float(i) / csv_count)
+            i += 1
+
             self._cursor.execute('END')
 
         if volatile:
