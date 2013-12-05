@@ -246,8 +246,6 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.bmp = wx.Image(os.path.join(os.path.dirname(fname),tbl)+ '_rose.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                     #self.bmp.bitmap = wx.StaticBitmap(self.plot_rose, -1, self.bmp)
                     self.plot_rose.SetBitmap(self.bmp)
-                    
-
 
                     self.bmp2 = wx.Image(os.path.join(os.path.dirname(fname),tbl)+ '_time.png', wx.BITMAP_TYPE_ANY).ConvertToBitmap()
                     #self.bmp2.bitmap = wx.StaticBitmap(self.plot_time, -1, self.bmp2)
@@ -261,7 +259,7 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     if self.m_checkBox9.GetValue() == False:
                         os.remove(os.path.join(os.path.dirname(fname), tbl +'_time.png'))
                         os.remove(os.path.join(os.path.dirname(fname), tbl +'_rose.png'))
-                    
+
                     sql = "SELECT event_name FROM event"
                     cursor.execute(sql)
                     events = cursor.fetchall()

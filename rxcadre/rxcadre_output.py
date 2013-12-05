@@ -175,7 +175,8 @@ class RxCadreOutput(object):
                 kml = kml + '          <tr>\n' \
                             '            <td>%s</td>\n' \
                             '            <td>%.2f</td>\n' \
-                            '          </tr>\n' % (key+key2, self.stat[key][key2])
+                            '          </tr>\n' % (key+key2,
+                                                   self.stat[key][key2])
         kml = kml +         '        </table>\n' \
                             '      ]]>\n' \
                             '    </description>\n' \
@@ -260,7 +261,7 @@ class RxCadreWindOutput(RxCadreOutput):
                '    </Style>\n'
         return kml
 
-    def export_timeseries(self, filename):
+    def export_timeseries(self, filename=''):
         '''
         We handle the wind stuff slightly differently.
         '''
@@ -279,8 +280,10 @@ class RxCadreWindOutput(RxCadreOutput):
 
         fig.autofmt_xdate()
         plt.suptitle('Plot %s from %s to %s' % (self.plot_name,
-                     self.data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
-                     self.data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
+                     self.data['timestamp'][0].
+                     strftime('%m/%d/%Y %I:%M:%S %p'),
+                     self.data['timestamp'][-1].
+                     strftime('%m/%d/%Y %I:%M:%S %p')))
         if not filename:
             plt.show()
             plt.close()

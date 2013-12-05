@@ -295,6 +295,7 @@ class RxCadreDb():
         row = self._cursor.fetchone()
         return _extract_xy(row[0])
 
+
     def extract_obs_data(self, table_name, plot_name, start=None, end=None,
                          dumpfile=None):
         '''
@@ -312,10 +313,15 @@ class RxCadreDb():
         :param end: datetime representation of when to end data extraction,
                     if absent, use latest available timestamp.
 
+        :param dumpfile: convenience parameter for dumping straight to disk.
+                         The file extension determines
+
         :return: A dictionary with keys of {obs_cols:obs_names} keys and lists
                  of values, ie:
 
                  {'wind_spd' : 'Wind Speed(mph)'} : [2.3,4.6,4.4]}
+
+                 or None if dumped to disk.
         '''
 
         sql = '''SELECT * FROM obs_table WHERE obs_table_name=?'''
@@ -349,7 +355,7 @@ class RxCadreDb():
         rows = self._cursor.fetchall()
 
         if dumpfile:
-            fout = open(dumpfile, 'w')
+            fout = open(dumpfile, 'a')
             for row in rows:
                 fout.write(','.join([str(col) for col in row]))
                 fout.write('\n')
