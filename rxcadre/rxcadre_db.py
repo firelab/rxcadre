@@ -295,7 +295,8 @@ class RxCadreDb():
         row = self._cursor.fetchone()
         return _extract_xy(row[0])
 
-    def extract_obs_data(self, table_name, plot_name, start=None, end=None):
+    def extract_obs_data(self, table_name, plot_name, start=None, end=None,
+                         dumpfile=None):
         '''
         Extract data from a table in obs_table for generating output.
 
@@ -347,12 +348,18 @@ class RxCadreDb():
 
         rows = self._cursor.fetchall()
 
-        data = dict()
-        # FIXME: Hack for different types of tables.
-        if 'direction' in set(obs_cols):
+        if dumpfile:
+            fout = open(dumpfile, 'w')
+            for row in rows:
+                fout.write(','.join([str(col) for col in row]))
+                fout.write('\n')
+            fout.close()
+            return None
+        else:
+            data = dict()
             data['timestamp'] = [row[0] for row in rows]
-        for i, col in enumerate(obs_cols):
-            data[col] = [r[i+1] for r in rows]
+            for i, col in enumerate(obs_cols):
+                data[col] = [r[i+1] for r in rows]
 
         return data
 

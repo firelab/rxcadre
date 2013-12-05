@@ -103,11 +103,14 @@ class RxCadreOutput(object):
         return header
 
 
-    def export_csv(self):
+    def export_csv(self, prog_func=None):
         '''
         Export data as csv.
         '''
         csv = ''
+        if prog_func:
+            prog_func(0.0)
+
         for i, times in enumerate(self.data['timestamp']):
             csv += ','.join([self.plot_name, datetime.
                                         strftime(times, '%Y-%m-%d %H:%M:%S')])
@@ -115,6 +118,9 @@ class RxCadreOutput(object):
             csv += ','.join([str(self.data[k][i]) for k in self.data.keys() \
                              if k != 'timestamp'])
             csv += '\n'
+            if prog_func:
+                if i % 1000:
+                    prog_func(float(i) / len(self.data['timestamp']))
         return csv
 
 
