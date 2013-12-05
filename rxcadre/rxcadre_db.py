@@ -355,11 +355,11 @@ class RxCadreDb():
                 fout.write('\n')
             fout.close()
             return None
-        else:
-            data = dict()
-            data['timestamp'] = [row[0] for row in rows]
-            for i, col in enumerate(obs_cols):
-                data[col] = [r[i+1] for r in rows]
+
+        data = dict()
+        data['timestamp'] = [row[0] for row in rows]
+        for i, col in enumerate(obs_cols):
+            data[col] = [r[i+1] for r in rows]
 
         return data
 
