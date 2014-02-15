@@ -754,6 +754,26 @@ class RxCadre:
         else:
             raise ValueError("Invalid data")
 
+    def create_csv(self, data, start, end, filename):
+        '''
+        Create a csv dump
+        '''
+        if not data:
+            return
+        time = [datetime.datetime.strftime(t, '%Y%m%dT%H:%M:%S') for t in data['timestamp']]
+        n = len(time)
+        if not n:
+            return
+        speed = [str(s) for s in data['speed']]
+        direction = [str(d) for d in data['direction']]
+        gust = [str(g) for g in data['gust']]
+        fout = open(filename, 'w')
+        fout.write('timestamp,speed,direction,gust\n')
+        for i in range(n):
+            fout.write(','.join([time[i], speed[i], direction[i], gust[i]]))
+            fout.write('\n')
+        fout.close()
+
     def create_ogr(self,path,table,filename,start,end,db):
         '''
         Creates a terrifying Ogre with a CR of 50, 2500 hp, 4d20 + 32 crushing
@@ -936,7 +956,7 @@ class RxCadre:
         return filename
 
 
-    def create_csv(self, plot, filename,table,start,end,data,db):
+    def create_csv_old(self, plot, filename,table,start,end,data,db):
         if filename == '':
             filename = plot
         if filename[-4:] != '.csv':
@@ -944,7 +964,7 @@ class RxCadre:
 
         #data = self.fetch_point_data(plot,table,start,end,db)
         file = open(filename,"w+")
-        file.write('PlotID,Date\\Time, Speed, Direction, Gust' + '\n')
+        file.write('PlotID,DateTime, Speed, Direction, Gust' + '\n')
         for d in data:
             d = str(d)
             d = d.replace("u'","")
@@ -1214,9 +1234,6 @@ def rxcadre_main(args):
             if show:
                 plots = plots[:1]
                 pass
-            if args.csv:
-                csv_out = open('out.csv', 'w')
-                header_written = False
             for plot in plots:
                 if plot_dict[plot] == 'FBP':
                     data = rx.extract_obs_data('fbp_obs', plot, start, end)
@@ -1225,7 +1242,7 @@ def rxcadre_main(args):
                 if not data:
                     if not quiet:
                         print('Plot %s does not exist' % plot)
-                    sys.exit(1)
+                    continue
                 if args.timeseries or args.kmz:
                     if show:
                         rx.create_time_series_image(data, plot, start, end)
@@ -1246,8 +1263,8 @@ def rxcadre_main(args):
                         rx.create_kmz(plot, plot + '.kmz', None, start, end,
                                       plot + '_ts.png', '', data)
                 if args.csv:
-                    print(type(data))
-
+                    print(plot)
+                    rx.create_csv(data, start, end, plot + '.csv')
 
 if __name__ == "__main__":
     '''
