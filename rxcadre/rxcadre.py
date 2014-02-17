@@ -734,15 +734,21 @@ class RxCadre:
             data['direction']
         except KeyError:
             return
-        if len(data) >= 1:
+        if len(data['direction']) >= 1:
             #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
             fig = plt.figure(facecolor='w', edgecolor='w')
             rect = [0.1, 0.1, 0.8, 0.8]
             ax = WindroseAxes(fig, rect, axisbg='w')
             fig.add_axes(ax)
-            ax.bar(data['direction'], data['speed'], normed=True, opening=0.8, edgecolor='white')
-            #l = ax.legend(axespad=-0.10)
-            l = ax.legend(1.0)
+            try:
+                ax.bar(data['direction'], data['speed'], normed=True, opening=0.8,
+                       edgecolor='white')
+            except ValueError as e:
+                print(e)
+                print('Invalid data for %s' % plt_title)
+                raise e
+            l = ax.legend(axespad=-0.10)
+            #l = ax.legend(1.0)
             plt.setp(l.get_texts(), fontsize=8)
             if filename == '':
                 plt.show()
@@ -797,7 +803,7 @@ class RxCadre:
             driver.DeleteDataSource(filename +'.shp') 
         ds = driver.CreateDataSource(filename +'.shp')
         if ds is None:
-            print 'Could not create file'
+            print('Could not create file')
             raise RxCadreIOError('Could not create OGR datasource')
         SR = osr.SpatialReference()
         SR.ImportFromEPSG(4269)
@@ -1120,11 +1126,15 @@ time, date, plotID, wind speed, wind direction and wind gust column
                     self.create_time_series_image(data, plot, start, end,
                                                 plot + '_ts.png')
             if args.rose or args.kmz:
-                if show:
-                    self.create_windrose(data, plot, start, end)
-                else:
-                    self.create_windrose(data, plot, start, end,
-                                       plot + '_wr.png')
+                try:
+                    if show:
+                        self.create_windrose(data, plot, start, end)
+                    else:
+                        self.create_windrose(data, plot, start, end,
+                                           plot + '_wr.png')
+                except ValueError:
+                    if os.path.exists(plot+'_ts.png'):os.remove(plot+'_ts.png')
+                    continue
             if args.kmz:
                 if plot_dict[plot] == 'WIND':
                     self.create_kmz(plot, plot + '.kmz', None, start, end,
@@ -1239,7 +1249,7 @@ def rxcadre_main(args):
                     data = rx.extract_obs_data('fbp_obs', plot, start, end)
                 elif plot_dict[plot] == 'WIND':
                     data = rx.extract_obs_data('cup_vane_obs', plot, start, end)
-                if not data:
+                if not data['timestamp']:
                     if not quiet:
                         print('Plot %s does not exist' % plot)
                     continue
@@ -1250,11 +1260,15 @@ def rxcadre_main(args):
                         rx.create_time_series_image(data, plot, start, end,
                                                     plot + '_ts.png')
                 if args.rose or args.kmz:
-                    if show:
-                        rx.create_windrose(data, plot, start, end)
-                    else:
-                        rx.create_windrose(data, plot, start, end,
-                                           plot + '_wr.png')
+                    try:
+                        if show:
+                            rx.create_windrose(data, plot, start, end)
+                        else:
+                            rx.create_windrose(data, plot, start, end,
+                                               plot + '_wr.png')
+                    except ValueError:
+                        if(os.path.exists(plot+'_ts.png')):os.remove(plot+'_ts.png')
+                        continue
                 if args.kmz:
                     if plot_dict[plot] == 'WIND':
                         rx.create_kmz(plot, plot + '.kmz', None, start, end,
@@ -1358,7 +1372,7 @@ if __name__ == "__main__":
     '''
 
     parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
-                        help='Database to act on')
+                        help='Do not output to stdout')
     parser.add_argument('-l', '--logging', type=str, dest='level',
                         default='critical',
                         help='Logging level(DEBUG,INFO,WARNING,ERROR,CRITICAL')
