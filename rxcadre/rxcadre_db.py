@@ -5,7 +5,7 @@
 #  $Id$
 #  Project:  RX Cadre Data Visualization
 #  Purpose:  Data management
-#  Author:   Kyle Shannon <kyle@pobox.com>
+#  Author:   Kyle Shannon <kyle at pobox dot com>
 #
 ###############################################################################
 #
@@ -35,9 +35,9 @@
 #  For more information, please refer to <http://unlicense.org/>
 #
 ###############################################################################
-'''
+"""
 SQLite related class for storage of time series data
-'''
+"""
 
 from collections import OrderedDict as dict
 from datetime import datetime
@@ -45,15 +45,17 @@ import logging
 import os
 import sqlite3
 
+from rxcadre_except import RxCadreInvalidDbError, RxCadreInvalidDataError
+
 ###############################################################################
 # Logging stuff.
 ###############################################################################
 logging.basicConfig(level=logging.INFO)
 
 def _import_date(string):
-    '''
+    """
     Parse a datetime from a UTC string
-    '''
+    """
     try:
         parsed = datetime.strptime(string, '%m/%d/%Y %I:%M:%S %p')
     except ValueError:
@@ -61,61 +63,52 @@ def _import_date(string):
     return parsed
 
 def _extract_xy(wkt):
-    '''
+    """
     Extract x and y coordinates from wkt in the db.  Strip 'POINT' from the
     front, and split the remaining data losing the parentheses
-    '''
-
+    """
     wkt = wkt.strip().upper()
     if wkt.find('POINT') < 0:
         raise ValueError
     wkt = wkt[wkt.find('(')+1:wkt.find(')')].split()
     if len(wkt) != 2:
-        raise ValueError("Invalid wkt: %s" % wkt)
-    wkt[0] = wkt[0].replace("\"","")
-
-    wkt[1] = wkt[1].replace("\"","")
-    #wkt[1] = _to_decdeg(wkt[1])
-
+        raise ValueError
     return tuple([float(c) for c in wkt])
 
-
-
 class RxCadreDb():
-    '''Data management for rxcadre module'''
+    """Data management for rxcadre module"""
 
     def __init__(self, db_file):
         if not db_file or type(db_file) is not str:
             if db_file != "":
-                raise ValueError('Invalid file name')
+                raise RxCadreInvalidDbError('Invalid file name')
         self._db_file = db_file
         self._dbase = sqlite3.connect(db_file)
         self._cursor = self._dbase.cursor()
 
-
     @property
     def db_file(self):
-        '''
+        """
         Get the file name of the database
-        '''
+        """
         return self._db_file
 
 
     def __del__(self):
-        '''
+        """
         Cleanup, mainly close the db
-        '''
+        """
         if self._dbase:
             self._dbase.close()
 
 
     def init_new_db(self, fromsql=True):
         """
-        '''
+        """
         Create a new, empty database with appropriate metatables.  If the file
         previously exists, we fail before connecting using sqlite.  It must be
         a new file.
-        '''
+        """
         See data/*.sql for creation routines.
 
        """
@@ -124,38 +117,38 @@ class RxCadreDb():
             for stmt in stmts:
                 self._cursor.execute(stmt)
         else:
-            sql = '''
+            sql = """
                   CREATE TABLE plot_location(plot_id TEXT, x REAL, y REAL,
                                              geometry TEXT, plot_type TEXT)
-                  '''
+                  """
             self._cursor.execute(sql)
-            sql = '''
+            sql = """
                   CREATE TABLE event(event_name TEXT NOT NULL,
                                      event_start TEXT NOT NULL,
                                      event_end TEXT NOT NULL,
                                      PRIMARY KEY(project_name, event_name))
-                  '''
+                  """
             self._cursor.execute(sql)
-            sql = '''
+            sql = """
                   CREATE TABLE obs_table(obs_table_name TEXT NOT NULL,
                                          table_display name TEXT,
                                          timestamp_column TEXT NOT NULL,
                                          obs_cols TEXT NOT NULL,
                                          obs_col_names TEXT,
                                          PRIMARY KEY(obs_table_name))
-                  '''
+                  """
             self._cursor.execute(sql)
-            sql = '''
+            sql = """
                   CREATE_TABLE cup_vane_obs(plot_id TEXT NOT NULL,
                                             timestamp TEXT NOT NULL,
                                             direction REAL,
                                             speed REAL,
                                             gust REAL,
                                             PRIMARY KEY(plot_id, timestamp)
-                  '''
+                  """
 
             self._cursor.execute(sql)
-            sql = '''
+            sql = """
                   CREATE_TABLE fbp_obs(plot_id TEXT NOT NULL,
                                        timestamp TEXT NOT NULL,
                                        temperature REAL,
@@ -165,7 +158,7 @@ class RxCadreDb():
                                        mt_r REAL,
                                        nar REAL,
                                        PRIMARY KEY(plot_id, timestamp)
-                  '''
+                  """
 
             self._cursor.execute(sql)
             sql = 'INSERT INTO obs_table VALUES(?, ?, ?, ?, ?)'
@@ -183,11 +176,11 @@ class RxCadreDb():
 
 
     def check_valid_db(self):
-        '''
+        """
         Check the schema of an existing db.  This involves checking the
         metatables, and checking to make sure tables registered in obs_tables
         exist.
-        '''
+        """
 
         required_tables = set(['plot_location', 'event', 'obs_table'])
         sql = "SELECT name FROM sqlite_master WHERE type='table'"
@@ -205,7 +198,7 @@ class RxCadreDb():
 
     def register_obs_table(self, table_name, time_col, time_frmt,
                            col_names=None):
-        '''
+        """
         Register an observation table with the obs_tables table.
 
         param table_name: Name of the table to register.
@@ -220,9 +213,9 @@ class RxCadreDb():
                          timestamp and plot_id
 
         return: None.
-        '''
+        """
 
-        sql = '''PRAGMA table_info(?)'''
+        sql = """PRAGMA table_info(?)"""
         self._cursor.execute(sql, table_name)
         rows = self._cursor.fetchall()
         if not rows:
@@ -233,7 +226,7 @@ class RxCadreDb():
             valid_cols = set([row[1] for row in rows])
             if set(col_names.keys()) < valid_cols:
                 raise ValueError('Column definition is invalid')
-        sql = '''INSERT INTO obs_table VALUES(?, ?, ?, ?, ?, ?, ?)'''
+        sql = """INSERT INTO obs_table VALUES(?, ?, ?, ?, ?, ?, ?)"""
         self._cursor.execute(sql, table_name, table_name,
                                    time_col,
                              ','.join([name for name in col_names.keys()]),
@@ -242,9 +235,9 @@ class RxCadreDb():
 
 
     def get_obs_table_names(self):
-        '''
+        """
         Get the names of all stored observation tables as a list of strings.
-        '''
+        """
         sql = "SELECT obs_table_name FROM obs_table"
         self._cursor.execute(sql)
         names = [n[0] for n in self._cursor.fetchall()]
@@ -252,9 +245,9 @@ class RxCadreDb():
 
 
     def get_event_data(self, event_name=None):
-        '''
+        """
         Get the event names and the start, stop times for the events.
-        '''
+        """
         sql = "SELECT event_name, event_start, event_end from event"
         if event_name:
             sql += ' WHERE event_name=?'
@@ -268,17 +261,19 @@ class RxCadreDb():
 
 
     def get_plot_data(self, plot_name=None):
-        '''
+        """
         Get simple plot information.
-        '''
+        """
         if not plot_name:
-            sql = "SELECT plot_id, geometry, plot_type from plot_location"
+            sql = """
+                  SELECT plot_id, geometry, plot_type from plot_location
+                  """
             self._cursor.execute(sql)
         else:
-            sql = '''
+            sql = """
                   SELECT plot_id, geometry, x, y, plot_type FROM
                   plot_location WHERE plot_id=?
-                  '''
+                  """
             self._cursor.execute(sql, (plot_name,))
         plots = []
         for row in self._cursor.fetchall():
@@ -287,10 +282,10 @@ class RxCadreDb():
 
 
     def point_location(self, plot):
-        '''
+        """
         Fetch the x and y coordinate of the plot
-        '''
-        sql = '''SELECT geometry FROM plot_location WHERE plot_id=?'''
+        """
+        sql = """SELECT geometry FROM plot_location WHERE plot_id=?"""
         self._cursor.execute(sql, (plot,))
         row = self._cursor.fetchone()
         return _extract_xy(row[0])
@@ -298,7 +293,7 @@ class RxCadreDb():
 
     def extract_obs_data(self, table_name, plot_name, start=None, end=None,
                          dumpfile=None):
-        '''
+        """
         Extract data from a table in obs_table for generating output.
 
         :param table_name: Name of the table to query.  Must be in the
@@ -322,9 +317,9 @@ class RxCadreDb():
                  {'wind_spd' : 'Wind Speed(mph)'} : [2.3,4.6,4.4]}
 
                  or None if dumped to disk.
-        '''
+        """
 
-        sql = '''SELECT * FROM obs_table WHERE obs_table_name=?'''
+        sql = """SELECT * FROM obs_table WHERE obs_table_name=?"""
         self._cursor.execute(sql, (table_name,))
         row = self._cursor.fetchone()
         if not row:
@@ -333,21 +328,21 @@ class RxCadreDb():
         time_col = row[2]
         obs_cols = [c.strip() for c in row[3].split(',')]
         if not start:
-            sql = '''SELECT MIN(datetime(%s)) FROM %s
-                     WHERE plot_id=?''' % (time_col, table_name)
+            sql = """SELECT MIN(datetime(%s)) FROM %s
+                     WHERE plot_id=?""" % (time_col, table_name)
             self._cursor.execute(sql, (plot_name,))
             start = datetime.strptime(self._cursor.fetchone()[0],
                                                '%Y-%m-%d %H:%M:%S')
         if not end:
-            sql = '''SELECT MAX(datetime(%s)) FROM %s
-                     WHERE plot_id=?''' % (time_col, table_name)
+            sql = """SELECT MAX(datetime(%s)) FROM %s
+                     WHERE plot_id=?""" % (time_col, table_name)
             self._cursor.execute(sql, (plot_name,))
             end = datetime.strptime(self._cursor.fetchone()[0],
                                              '%Y-%m-%d %H:%M:%S')
-        sql = '''
+        sql = """
               SELECT %s as timestamp, %s FROM %s WHERE plot_id=? AND
               datetime(%s) BETWEEN datetime(?) AND datetime(?)
-              ''' % (time_col, ','.join(obs_cols), table_name, time_col)
+              """ % (time_col, ','.join(obs_cols), table_name, time_col)
 
         logging.debug('Unbound sql: %s', sql)
         self._cursor.execute(sql, (plot_name, start, end))
@@ -371,7 +366,7 @@ class RxCadreDb():
 
 
     def import_wind_data(self, csv_file, volatile=False, prog_func=None):
-        '''
+        """
         Read in the data for the hobo loggers.  We currently have this as a
         large single csv.
 
@@ -382,7 +377,7 @@ class RxCadreDb():
                          prog_func(float) that takes a decimal fraction p
                          where:
                          0 =< p =< 1.0
-        '''
+        """
 
         if volatile:
             self._cursor.execute('PRAGMA journal_mode=OFF')
@@ -432,7 +427,7 @@ class RxCadreDb():
 
 
     def import_fbp_data(self, path, volatile=False, prog_func=None):
-        '''
+        """
         Import the fire behavior package data from a path.  This recursively
         runs through and opens any/all csv file and does a very simple header
         check.  Import data is assumed to be constant schema.
@@ -453,7 +448,7 @@ class RxCadreDb():
 
         :param path: path to start recursive import
         :return:
-        '''
+        """
 
         csv_files = []
         if path.endswith('.csv'):

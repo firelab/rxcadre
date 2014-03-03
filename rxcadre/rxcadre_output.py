@@ -5,7 +5,7 @@
 #  $Id$
 #  Project:  RX Cadre Data Visualization
 #  Purpose:  Import csv data into tables
-#  Author:   Kyle Shannon <kyle@pobox.com>
+#  Author:   Kyle Shannon <kyle at pobox dot com>
 #
 ###############################################################################
 #
