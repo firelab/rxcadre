@@ -661,7 +661,7 @@ class RxCadre:
 
         return data
 
-    def create_time_series_image(self, data, plt_title, start, end, filename=''):
+    def _create_time_series_image(self, data, plt_title, start, end, filename=''):
         '''
         Create a time series image for the plot over the time span
         '''
@@ -724,6 +724,11 @@ class RxCadre:
             plt.close()
         return filename
 
+    def create_time_series_image(self, plot, title, start, end, filename=''):
+
+        data = self.extract_obs_data('cup_vane_obs', plot, start, end)
+        self._create_time_series_image(data, title, start, end, filename)
+        return filename
 
     def create_windrose(self, data, plt_title, start, end, filename=''):
         '''
@@ -1121,9 +1126,9 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 continue
             if args.timeseries or args.kmz:
                 if show:
-                    self.create_time_series_image(data, plot, start, end)
+                    self._create_time_series_image(data, plot, start, end)
                 else:
-                    self.create_time_series_image(data, plot, start, end,
+                    self._create_time_series_image(data, plot, start, end,
                                                 plot + '_ts.png')
             if args.rose or args.kmz:
                 try:
@@ -1255,9 +1260,9 @@ def rxcadre_main(args):
                     continue
                 if args.timeseries or args.kmz:
                     if show:
-                        rx.create_time_series_image(data, plot, start, end)
+                        rx._create_time_series_image(data, plot, start, end)
                     else:
-                        rx.create_time_series_image(data, plot, start, end,
+                        rx._create_time_series_image(data, plot, start, end,
                                                     plot + '_ts.png')
                 if args.rose or args.kmz:
                     try:

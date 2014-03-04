@@ -37,31 +37,158 @@
 ###############################################################################
 
 from Tkinter import *
+from tkFileDialog import askopenfilename
+
+from rxcadre import RxCadre
+from rxcadre_except import RxCadreError
 
 class RxCadreTk(Frame):
 
-    def say_hi(self):
-        self.hi_there["text"] = "World"
+    def connect_db(self):
+        fname = askopenfilename(filetypes=(("SQLite files", "*.db;*.sqlite"),
+                                           ("All files", "*.*") ))
+        if not fname:
+            return
+        try:
+            self.cadre = RxCadre(fname)
+        except RxCadreError as e:
+            print(e)
+        event_data = self.cadre.get_event_data()
+        for event in event_data.keys():
+            self.event_listbox.insert(END, event)
+        plot_data = self.cadre.get_plot_data()
+        self.plot_listbox.insert(END, 'ALL')
+        for plot in plot_data:
+            self.plot_listbox.insert(END, plot[0])
+
+    def create_db(self):
+        print('create')
+
+    def import_db(self):
+        print('import')
+
+    def load_event_data(self):
+
+        if not self.cadre:
+            return
+        event = self.event_listbox.get(ACTIVE)
+        if not event:
+            return
+        print(event)
+        data = self.cadre.get_event_data(event)
+        print(data)
+        start, end = data.items()[0][1]
+        self.event_start_entry.delete(0, END)
+        self.event_start_entry.insert(0, start)
+        self.event_end_entry.delete(0, END)
+        self.event_end_entry.insert(0, end)
+
+    def create_ts_image(self):
+        '''
+        Read the plot id and start/stop time from the GUI and create an image.
+        '''
+        if not self.cadre:
+            return
+        plot = self.plot_listbox.get(ACTIVE)
+        start = self.event_start_entry.get()
+        end = self.event_end_entry.get()
+        self.cadre.create_time_series_image(plot, 'TEST', start, end, '')
+
+    def create_menus(self):
+        self.menubar = Menu(self)
+        self.filemenu = Menu(self.menubar, tearoff=0)
+        self.filemenu.add_command(label="Connect", command=self.connect_db)
+        self.filemenu.add_command(label="Create", command=self.create_db)
+        self.filemenu.add_command(label="Import", command=self.import_db)
+        self.filemenu.add_separator()
+        self.filemenu.add_command(label="Exit", command=self.quit)
+        self.menubar.add_cascade(label="File", menu=self.filemenu)
+        self.master.config(menu=self.menubar)
+
+    def create_plot_listbox(self):
+        self.plot_label = Label(self.plot_frame, text="Plot id:")
+        self.plot_label.pack(side=TOP)
+        self.plot_name = StringVar(self)
+        self.plot_scrollbar = Scrollbar(self.plot_frame, orient=VERTICAL)
+        self.plot_listbox = Listbox(self.plot_frame,
+                                    yscrollcommand=self.plot_scrollbar.set,
+                                    selectmode=EXTENDED)
+        self.plot_scrollbar.config(command=self.plot_listbox.yview)
+        self.plot_scrollbar.pack(side=RIGHT, fill=Y)
+        self.plot_listbox.pack(side=LEFT, fill=BOTH, expand=1)
+
+    def create_event_listbox(self):
+
+        self.event_label = Label(self.event_frame, text="Event:")
+        self.event_label.pack(side=TOP)
+        self.event_name = StringVar(self)
+        self.event_scrollbar = Scrollbar(self.event_frame, orient=VERTICAL)
+        self.event_listbox = Listbox(self.event_frame,
+                                     yscrollcommand=self.event_scrollbar.set,
+                                     selectmode=BROWSE)
+        self.event_scrollbar.config(command=self.event_listbox.yview)
+        self.event_scrollbar.pack(side=RIGHT, fill=Y)
+        self.event_listbox.pack(side=LEFT, fill=BOTH, expand=1)
+
+    def create_event_time_entries(self):
+
+        self.event_start_label = Label(self.event_time_frame, text='Start Time:')
+        self.event_start_label.pack()
+        self.event_start_entry = Entry(self.event_time_frame)
+        self.event_start_entry.pack()
+        self.event_end_label = Label(self.event_time_frame, text='End Time:')
+        self.event_end_label.pack()
+        self.event_end_entry = Entry(self.event_time_frame)
+        self.event_end_entry.pack()
+        self.event_query_button = Button(self.event_time_frame,
+                                         text='Load Event',
+                                         command=self.load_event_data)
+        self.event_query_button.pack()
+
+    def create_ts(self):
+        '''
+        Create a button that creates a time series image.
+        '''
+        self.ts_button = Button(self.ts_frame, text='Create Time Series',
+                                command=self.create_ts_image)
+        self.ts_button.pack()
+
     def create(self):
-        self.QUIT = Button(self)
-        self.QUIT["text"] = "QUIT"
-        self.QUIT["fg"]   = "red"
-        self.QUIT["command"] =  self.quit
+        '''
+        Build and pack the entire tk GUI.
+        '''
 
-        self.QUIT.pack({"side": "left"})
+        # Menu bar
+        self.create_menus()
 
-        self.hi_there = Button(self)
-        self.hi_there["text"] = "Hello",
-        self.hi_there["command"] = self.say_hi
+        # Plot data
+        self.plot_frame = Frame(self)
+        self.plot_frame.pack(side=LEFT)
 
-        self.hi_there.pack({"side": "left"})
+        # Event data
+        self.event_frame = Frame(self)
+        self.create_plot_listbox()
+        self.event_frame.pack(side=LEFT)
+        self.create_event_listbox()
+        self.event_time_frame = Frame(self)
+        self.event_time_frame.pack(side=LEFT)
+        self.create_event_time_entries()
+
+        # Timeseries Image
+        self.ts_frame = Frame(self)
+        self.ts_frame.pack()
+        self.create_ts()
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
+        self.cadre = None
         self.pack()
         self.create()
 
 root = Tk()
 app = RxCadreTk(master=root)
 app.mainloop()
-root.destroy()
+try:
+    root.destroy()
+except:
+    pass
