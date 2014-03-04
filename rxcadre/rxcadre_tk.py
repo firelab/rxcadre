@@ -68,7 +68,13 @@ class RxCadreTk(Frame):
         print('import')
 
     def load_event_data(self):
+        '''
+        Load pertinent information from a specific event
 
+        This is primarily the date and time, although we do filter the plot
+        list based on name (currently the start of plots is the event name).
+        This should possibly be made optional.
+        '''
         if not self.cadre:
             return
         event = self.event_listbox.get(ACTIVE)
@@ -82,6 +88,13 @@ class RxCadreTk(Frame):
         self.event_start_entry.insert(0, start)
         self.event_end_entry.delete(0, END)
         self.event_end_entry.insert(0, end)
+        print self.filter_plots
+        if self.filter_plots:
+            plots = self.cadre.get_plot_data()
+            self.plot_listbox.delete(0, END)
+            for plot in plots:
+                if plot[0].startswith(event):
+                    self.plot_listbox.insert(END, plot[0])
 
     def create_ts_image(self):
         '''
@@ -92,6 +105,8 @@ class RxCadreTk(Frame):
         plot = self.plot_listbox.get(ACTIVE)
         start = self.event_start_entry.get()
         end = self.event_end_entry.get()
+        if not plot or not start or not end:
+            return
         self.cadre.create_time_series_image(plot, 'TEST', start, end, '')
 
     def create_menus(self):
@@ -130,6 +145,12 @@ class RxCadreTk(Frame):
         self.event_scrollbar.pack(side=RIGHT, fill=Y)
         self.event_listbox.pack(side=LEFT, fill=BOTH, expand=1)
 
+    def test(self):
+        if self.filter_plots == 0:
+            self.filter_plots = 1
+        else:
+            self.filter_plots = 0
+
     def create_event_time_entries(self):
 
         self.event_start_label = Label(self.event_time_frame, text='Start Time:')
@@ -144,6 +165,11 @@ class RxCadreTk(Frame):
                                          text='Load Event',
                                          command=self.load_event_data)
         self.event_query_button.pack()
+        self.plot_checkbox = Checkbutton(self.event_time_frame,
+                                         text="Filter Plots by Event",
+                                         variable=self.filter_plots,
+                                         command=self.test)
+        self.plot_checkbox.pack(side=BOTTOM)
 
     def create_ts(self):
         '''
@@ -157,6 +183,9 @@ class RxCadreTk(Frame):
         '''
         Build and pack the entire tk GUI.
         '''
+
+        # Variables
+        self.filter_plots = 0
 
         # Menu bar
         self.create_menus()

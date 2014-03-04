@@ -726,6 +726,10 @@ class RxCadre:
 
     def create_time_series_image(self, plot, title, start, end, filename=''):
 
+        table = 'cup_vane_obs'
+        if plot.find('FB') > -1:
+            table = 'fbp_obs'
+
         data = self.extract_obs_data('cup_vane_obs', plot, start, end)
         self._create_time_series_image(data, title, start, end, filename)
         return filename
