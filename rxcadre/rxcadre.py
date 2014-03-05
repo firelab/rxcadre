@@ -583,7 +583,7 @@ class RxCadre:
                             '    <description>\n' \
                             '      <![CDATA[\n' % plot
         for image in images:
-            kml = kml +     '        < in a img src = "%s" />\n'  % image
+            kml = kml +     '        < img src = "%s" />\n'  % image
         kml = kml +         '        <table border="1">' \
                             '          <tr>\n' \
                             '            <th>Stats</th>\n' \
