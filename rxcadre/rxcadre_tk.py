@@ -37,7 +37,7 @@
 ###############################################################################
 
 from Tkinter import *
-from tkFileDialog import askopenfilename
+from tkFileDialog import askopenfilename, asksaveasfilename, askdirectory
 
 from rxcadre import RxCadre
 from rxcadre_except import RxCadreError
@@ -128,6 +128,9 @@ class RxCadreTk(Frame):
         self.cadre.create_windrose_image(plot, 'TEST', start, end, '')
 
     def export_ogr(self):
+        '''
+        Export to an OGR datasource.
+        '''
 
         if not self.cadre or not HAVE_OGR:
             return
@@ -138,7 +141,11 @@ class RxCadreTk(Frame):
         end = self.event_end_entry.get()
         if not plots or not start or not end:
             return
-        self.cadre.export_ogr(plots, start, end, 'test.shp')
+        fname = asksaveasfilename(filetypes=(('ESRI Shapefile', '*.shp'),),
+                                  initialdir='.')
+        if not fname:
+            return
+        self.cadre.export_ogr(plots, start, end, fname)
 
     def export_csv(self):
 
@@ -151,7 +158,10 @@ class RxCadreTk(Frame):
         end = self.event_end_entry.get()
         if not plots or not start or not end:
             return
-        self.cadre.export_csv(plots, start, end, '.')
+        pname = askdirectory(initialdir='.')
+        if not pname:
+            return
+        self.cadre.export_csv(plots, start, end, pname)
 
     def create_menus(self):
         self.menubar = Menu(self)
@@ -205,12 +215,18 @@ class RxCadreTk(Frame):
         self.event_query_button.pack()
 
     def set_filter(self):
+        '''
+        Hack for 'broken' check box
+        '''
         if self.filter_plots == 0:
             self.filter_plots = 1
         else:
             self.filter_plots = 0
 
     def set_summary(self):
+        '''
+        Hack for 'broken' check box
+        '''
         if self.summary_only == 0:
             self.summary_only = 1
         else:
