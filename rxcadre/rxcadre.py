@@ -181,6 +181,8 @@ class RxCadre:
         '''
         if self.db:
             self.db.close()
+        plt.close(1)
+        plt.close(2)
 
     def set_db(self, db):
         '''
@@ -581,7 +583,7 @@ class RxCadre:
                             '    <description>\n' \
                             '      <![CDATA[\n' % plot
         for image in images:
-            kml = kml +     '        <img src = "%s" />\n'  % image
+            kml = kml +     '        < in a img src = "%s" />\n'  % image
         kml = kml +         '        <table border="1">' \
                             '          <tr>\n' \
                             '            <th>Stats</th>\n' \
@@ -691,7 +693,7 @@ class RxCadre:
         except KeyError:
             wind = False
 
-        fig = plt.figure()
+        fig = plt.figure(1)
         time = [mdates.date2num(d) for d in data['timestamp']]
         if not wind:
             cols = self.get_obs_cols('fbp_obs')
@@ -716,22 +718,22 @@ class RxCadre:
                      data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
                      data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
         if not filename:
-            plt.show()
-            plt.close()
+            plt.show(1)
+            plt.clf()
         else:
             plt.savefig(filename)
-            plt.close()
+            plt.clf()
         return filename
 
-    def create_time_series_image(self, plot, title, start, end, filename=''):
+    def create_time_series_image(self, plots, title, start, end, path):
 
         table = 'cup_vane_obs'
-        if plot.find('FB') > -1:
-            table = 'fbp_obs'
-
-        data = self.extract_obs_data(table, plot, start, end)
-        self._create_time_series_image(data, title, start, end, filename)
-        return filename
+        for plot in plots:
+            if plot.find('FB') > -1:
+                table = 'fbp_obs'
+            filename = os.path.join(path, plot + '_ts.png')
+            data = self.extract_obs_data(table, plot, start, end)
+            self._create_time_series_image(data, title, start, end, filename)
 
     def create_windrose(self, data, plt_title, start, end, filename=''):
         '''
@@ -743,8 +745,7 @@ class RxCadre:
         except KeyError:
             return
         if len(data['direction']) >= 1:
-            #fig = plt.figure(figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
-            fig = plt.figure(facecolor='w', edgecolor='w')
+            fig = plt.figure(2, figsize=(8, 8), dpi=80, facecolor='w', edgecolor='w')
             rect = [0.1, 0.1, 0.8, 0.8]
             ax = WindroseAxes(fig, rect, axisbg='w')
             fig.add_axes(ax)
@@ -759,25 +760,24 @@ class RxCadre:
             #l = ax.legend(1.0)
             plt.setp(l.get_texts(), fontsize=8)
             if filename == '':
-                plt.show()
-                plt.close()
+                plt.show(2)
+                plt.clf()
             else:
                 plt.savefig(filename)
-                plt.close()
+                plt.clf()
             return filename
         else:
             raise ValueError("Invalid data")
 
-    def create_windrose_image(self, plot, title, start, end, filename=''):
+    def create_windrose_image(self, plots, title, start, end, path):
 
         table = 'cup_vane_obs'
-        if plot.find('FB') > -1:
-            table = 'fbp_obs'
-
-        data = self.extract_obs_data(table, plot, start, end)
-        self.create_windrose(data, title, start, end, filename)
-        return filename
-
+        for plot in plots:
+            if plot.find('FB') > -1:
+                continue
+            filename = os.path.join(path, plot + '_wr.png')
+            data = self.extract_obs_data(table, plot, start, end)
+            self.create_windrose(data, title, start, end, filename)
 
     def create_csv(self, data, start, end, filename):
         '''
@@ -997,10 +997,10 @@ class RxCadre:
                 kml = self._point_kml(plot, data, db,[pngfile,rosefile])
             except Exception as e:
                 logging.warning('Unknown exception has occurred')
-                #if os.path.exists(pngfile):
-                #    os.remove(pngfile)
-                #if os.path.exists(rosefile):
-                #    os.remove(rosefile)
+                if os.path.exists(pngfile):
+                    os.remove(pngfile)
+                if os.path.exists(rosefile):
+                    os.remove(rosefile)
                 continue
 
             fout.write(kml)
@@ -1045,6 +1045,54 @@ class RxCadre:
         os.remove(kmlfile)
         for image in images:
             os.remove(image)
+        return filename
+
+    def export_kmz(self, plots, start, end, filename):
+
+        if not plots:
+            return
+        if filename[-4:] != '.kmz':
+            filename = filename + '.kmz'
+
+        kmlfile = 'doc.kml'
+        fout = open(kmlfile, 'w')
+        fout.write('<Document>\n')
+        kmz = zipfile.ZipFile(filename, 'w', 0, True)
+
+        for plot in plots:
+            data = self.extract_obs_data('cup_vane_obs', plot, start, end)
+            if not data['timestamp']:
+                continue
+            images = []
+            '''
+            wr_file = self.create_windrose(data, plot, start, end,
+                                                 plot + '_wr.png')
+            if wr_file:
+                images.append(wr_file)
+            '''
+            ts_file = self._create_time_series_image(data, plot, start, end,
+                                                     plot + '_ts.png')
+            if ts_file:
+                images.append(ts_file)
+            kml = self._point_kml(plot, data, images)
+            fout.write(kml)
+
+            for image in images:
+                kmz.write(image)
+            for image in images:
+                try:
+                    os.remove(image)
+                except:
+                    pass
+
+        fout.write('</Document>\n')
+        fout.close()
+        kmz.write(kmlfile)
+        kmz.close()
+        try:
+            os.remove(kmlfile)
+        except:
+            pass
         return filename
 
 

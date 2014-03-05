@@ -107,12 +107,15 @@ class RxCadreTk(Frame):
         '''
         if not self.cadre:
             return
-        plot = self.plot_listbox.get(ACTIVE)
+        items = map(int, self.plot_listbox.curselection())
+        data = self.plot_listbox.get(0, END)
+        plots = [data[int(item)] for item in items]
         start = self.event_start_entry.get()
         end = self.event_end_entry.get()
-        if not plot or not start or not end:
+        if not plots or not start or not end:
             return
-        self.cadre.create_time_series_image(plot, 'TEST', start, end, '')
+        pname = askdirectory(initialdir='.')
+        self.cadre.create_time_series_image(plots, 'TEST', start, end, pname)
 
     def create_wr_image(self):
         '''
@@ -120,12 +123,15 @@ class RxCadreTk(Frame):
         '''
         if not self.cadre:
             return
-        plot = self.plot_listbox.get(ACTIVE)
+        items = map(int, self.plot_listbox.curselection())
+        data = self.plot_listbox.get(0, END)
+        plots = [data[int(item)] for item in items]
         start = self.event_start_entry.get()
         end = self.event_end_entry.get()
-        if not plot or not start or not end:
+        if not plots or not start or not end:
             return
-        self.cadre.create_windrose_image(plot, 'TEST', start, end, '')
+        pname = askdirectory(initialdir='.')
+        self.cadre.create_windrose_image(plots, 'TEST', start, end, pname)
 
     def export_ogr(self):
         '''
@@ -162,6 +168,25 @@ class RxCadreTk(Frame):
         if not pname:
             return
         self.cadre.export_csv(plots, start, end, pname)
+
+    def export_kmz(self):
+
+        if not self.cadre:
+            return
+        items = map(int, self.plot_listbox.curselection())
+        data = self.plot_listbox.get(0, END)
+        plots = [data[int(item)] for item in items]
+        start = self.event_start_entry.get()
+        end = self.event_end_entry.get()
+        if not plots or not start or not end:
+            return
+        fname = asksaveasfilename(filetypes=(('Google Earth', '*.kmz'),),
+                                  initialdir='.')
+        if not fname:
+            return
+        self.cadre.export_kmz(plots, start, end, fname)
+        return 1
+
 
     def create_menus(self):
         self.menubar = Menu(self)
@@ -271,6 +296,10 @@ class RxCadreTk(Frame):
         self.csv_button = Button(self.ts_frame, text='Export to CSV',
                                  command=self.export_csv)
         self.csv_button.pack()
+        self.kmz_button = Button(self.ts_frame, text='Export to KMZ',
+                                 command=self.export_kmz)
+        self.kmz_button.pack()
+
 
     def create(self):
         '''
@@ -311,10 +340,12 @@ class RxCadreTk(Frame):
         self.pack()
         self.create()
 
+def _quit():
+    root.quit()
+    root.destroy()
+
 root = Tk()
+root.protocol("WM_DELETE_WINDOW", _quit)
 app = RxCadreTk(master=root)
 app.mainloop()
-try:
-    root.destroy()
-except:
-    pass
+
