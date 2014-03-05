@@ -42,11 +42,19 @@ from tkFileDialog import askopenfilename
 from rxcadre import RxCadre
 from rxcadre_except import RxCadreError
 
+HAVE_OGR = True
+try:
+    from osgeo import ogr
+except ImportError:
+    HAVE_OGR = False
+
+
 class RxCadreTk(Frame):
 
     def connect_db(self):
-        fname = askopenfilename(filetypes=(("SQLite files", "*.db;*.sqlite"),
-                                           ("All files", "*.*") ))
+        fname = askopenfilename(filetypes=(('SQLite files', '*.db'),
+                                           ('All files', '*.*')),
+                                initialdir='../data')
         if not fname:
             return
         try:
@@ -57,7 +65,7 @@ class RxCadreTk(Frame):
         for event in event_data.keys():
             self.event_listbox.insert(END, event)
         plot_data = self.cadre.get_plot_data()
-        self.plot_listbox.insert(END, 'ALL')
+        #self.plot_listbox.insert(END, 'ALL')
         for plot in plot_data:
             self.plot_listbox.insert(END, plot[0])
 
@@ -80,15 +88,12 @@ class RxCadreTk(Frame):
         event = self.event_listbox.get(ACTIVE)
         if not event:
             return
-        print(event)
         data = self.cadre.get_event_data(event)
-        print(data)
         start, end = data.items()[0][1]
         self.event_start_entry.delete(0, END)
         self.event_start_entry.insert(0, start)
         self.event_end_entry.delete(0, END)
         self.event_end_entry.insert(0, end)
-        print self.filter_plots
         if self.filter_plots:
             plots = self.cadre.get_plot_data()
             self.plot_listbox.delete(0, END)
@@ -109,12 +114,51 @@ class RxCadreTk(Frame):
             return
         self.cadre.create_time_series_image(plot, 'TEST', start, end, '')
 
+    def create_wr_image(self):
+        '''
+        Read the plot id and start/stop time from the GUI and create an image.
+        '''
+        if not self.cadre:
+            return
+        plot = self.plot_listbox.get(ACTIVE)
+        start = self.event_start_entry.get()
+        end = self.event_end_entry.get()
+        if not plot or not start or not end:
+            return
+        self.cadre.create_windrose_image(plot, 'TEST', start, end, '')
+
+    def export_ogr(self):
+
+        if not self.cadre or not HAVE_OGR:
+            return
+        items = map(int, self.plot_listbox.curselection())
+        data = self.plot_listbox.get(0, END)
+        plots = [data[int(item)] for item in items]
+        start = self.event_start_entry.get()
+        end = self.event_end_entry.get()
+        if not plots or not start or not end:
+            return
+        self.cadre.export_ogr(plots, start, end, 'test.shp')
+
+    def export_csv(self):
+
+        if not self.cadre:
+            return
+        items = map(int, self.plot_listbox.curselection())
+        data = self.plot_listbox.get(0, END)
+        plots = [data[int(item)] for item in items]
+        start = self.event_start_entry.get()
+        end = self.event_end_entry.get()
+        if not plots or not start or not end:
+            return
+        self.cadre.export_csv(plots, start, end, '.')
+
     def create_menus(self):
         self.menubar = Menu(self)
         self.filemenu = Menu(self.menubar, tearoff=0)
         self.filemenu.add_command(label="Connect", command=self.connect_db)
-        self.filemenu.add_command(label="Create", command=self.create_db)
-        self.filemenu.add_command(label="Import", command=self.import_db)
+        #self.filemenu.add_command(label="Create", command=self.create_db)
+        #self.filemenu.add_command(label="Import", command=self.import_db)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.quit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
@@ -145,12 +189,6 @@ class RxCadreTk(Frame):
         self.event_scrollbar.pack(side=RIGHT, fill=Y)
         self.event_listbox.pack(side=LEFT, fill=BOTH, expand=1)
 
-    def test(self):
-        if self.filter_plots == 0:
-            self.filter_plots = 1
-        else:
-            self.filter_plots = 0
-
     def create_event_time_entries(self):
 
         self.event_start_label = Label(self.event_time_frame, text='Start Time:')
@@ -165,19 +203,58 @@ class RxCadreTk(Frame):
                                          text='Load Event',
                                          command=self.load_event_data)
         self.event_query_button.pack()
+
+    def set_filter(self):
+        if self.filter_plots == 0:
+            self.filter_plots = 1
+        else:
+            self.filter_plots = 0
+
+    def set_summary(self):
+        if self.summary_only == 0:
+            self.summary_only = 1
+        else:
+            self.summary_only = 0
+
+    def create_checkboxes(self):
+        '''
+        Create various checkboxes for output options.
+        '''
         self.plot_checkbox = Checkbutton(self.event_time_frame,
                                          text="Filter Plots by Event",
                                          variable=self.filter_plots,
-                                         command=self.test)
+                                         command=self.set_filter)
         self.plot_checkbox.pack(side=BOTTOM)
+        self.plot_checkbox.toggle()
+        self.filter_plots = 1
+        self.summary_checkbox = Checkbutton(self.event_time_frame,
+                                            text="Summarize data",
+                                            variable=self.summary_only,
+                                            command=self.set_summary)
+        self.summary_checkbox.pack(side=BOTTOM)
+        self.summary_checkbox.toggle()
+        self.summary_only = 1
 
-    def create_ts(self):
+
+    def create_out_buttons(self):
         '''
         Create a button that creates a time series image.
         '''
         self.ts_button = Button(self.ts_frame, text='Create Time Series',
                                 command=self.create_ts_image)
         self.ts_button.pack()
+        self.wr_button = Button(self.ts_frame, text='Create Wind Rose',
+                                command=self.create_wr_image)
+        self.wr_button.pack()
+
+        if HAVE_OGR:
+            self.ogr_button = Button(self.ts_frame, text='Export to OGR',
+                                     command=self.export_ogr)
+            self.ogr_button.pack()
+
+        self.csv_button = Button(self.ts_frame, text='Export to CSV',
+                                 command=self.export_csv)
+        self.csv_button.pack()
 
     def create(self):
         '''
@@ -186,6 +263,7 @@ class RxCadreTk(Frame):
 
         # Variables
         self.filter_plots = 0
+        self.summary_only = 1
 
         # Menu bar
         self.create_menus()
@@ -203,10 +281,13 @@ class RxCadreTk(Frame):
         self.event_time_frame.pack(side=LEFT)
         self.create_event_time_entries()
 
+        # Checkable options
+        self.create_checkboxes()
+
         # Timeseries Image
         self.ts_frame = Frame(self)
         self.ts_frame.pack()
-        self.create_ts()
+        self.create_out_buttons()
 
     def __init__(self, master=None):
         Frame.__init__(self, master)

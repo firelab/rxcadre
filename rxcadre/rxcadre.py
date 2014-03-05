@@ -61,8 +61,7 @@ import numpy as np
 
 import scipy.stats as stats
 
-from osgeo import ogr
-from osgeo import osr
+from osgeo import ogr, osr
 
 sys.path.append(os.path.abspath('windrose'))
 
@@ -730,7 +729,7 @@ class RxCadre:
         if plot.find('FB') > -1:
             table = 'fbp_obs'
 
-        data = self.extract_obs_data('cup_vane_obs', plot, start, end)
+        data = self.extract_obs_data(table, plot, start, end)
         self._create_time_series_image(data, title, start, end, filename)
         return filename
 
@@ -769,6 +768,17 @@ class RxCadre:
         else:
             raise ValueError("Invalid data")
 
+    def create_windrose_image(self, plot, title, start, end, filename=''):
+
+        table = 'cup_vane_obs'
+        if plot.find('FB') > -1:
+            table = 'fbp_obs'
+
+        data = self.extract_obs_data(table, plot, start, end)
+        self.create_windrose(data, title, start, end, filename)
+        return filename
+
+
     def create_csv(self, data, start, end, filename):
         '''
         Create a csv dump
@@ -788,6 +798,21 @@ class RxCadre:
             fout.write(','.join([time[i], speed[i], direction[i], gust[i]]))
             fout.write('\n')
         fout.close()
+
+    def export_csv(self, plots, start, end, path):
+
+        if not plots:
+            return
+        for plot in plots:
+            table = 'cup_vane_obs'
+            if plot.find('FB') > -1:
+                table = 'fbp_obs'
+            data = self.extract_obs_data(table, plot, start, end)
+            if not data['timestamp']:
+                continue
+            fout = os.path.join(path, plot + '.csv')
+            self.create_csv(data, start, end, fout)
+
 
     def create_ogr(self,path,table,filename,start,end,db):
         '''
@@ -886,6 +911,58 @@ class RxCadre:
         #DESTROY!
         ds.Destroy()
 
+    def export_ogr(self, plots, start, end, filename, frmt='ESRI Shapefile',
+                   summary=True):
+
+        if not plots:
+            return
+        driver = ogr.GetDriverByName(frmt)
+        if not driver:
+            raise RxCadreError('Could not get OGR Driver')
+        ds = driver.CreateDataSource(filename)
+        if ds is None:
+            raise RxCadreIOError('Could not create OGR datasource')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4269)
+        layer = ds.CreateLayer(filename, srs, geom_type=ogr.wkbPoint)
+        featureDefn = layer.GetLayerDefn()
+
+        fieldDefn = ogr.FieldDefn('plot_id', ogr.OFTString)
+        fieldDefn.SetWidth(50)
+        layer.CreateField(fieldDefn)
+
+        for field in ('spd_avg', 'spd_stdv', 'dir_avg', 'dir_stdv'):
+            fieldDefn = ogr.FieldDefn(field, ogr.OFTReal)
+            layer.CreateField(fieldDefn)
+
+        table = 'cup_vane_obs'
+
+        for plot in plots:
+            data = self.extract_obs_data(table, plot, start, end)
+            if not data['timestamp']:
+                continue
+            x, y = _extract_xy(self.get_plot_data(plot)[0][1])
+            cstats = self.calc_circ_statistics(data)
+            stats = self.calc_statistics(data)
+
+            point = ogr.Geometry(ogr.wkbPoint)
+            point.SetPoint(0, x, y)
+
+            feature = ogr.Feature(featureDefn)
+            feature.SetGeometry(point)
+            print(type(plot))
+            feature.SetField('plot_id', str(plot))
+            feature.SetField('spd_avg', stats['speed'][2])
+            feature.SetField('spd_stdv', stats['speed'][3])
+            feature.SetField('dir_avg', cstats[2])
+            feature.SetField('dir_stdv', cstats[3])
+
+            layer.CreateFeature(feature)
+
+            point.Destroy()
+            feature.Destroy()
+
+        ds.Destroy()
 
     def create_field_kmz(self, filename, table,start,end,plotID,path,db):
         '''
