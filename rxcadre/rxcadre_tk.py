@@ -115,6 +115,8 @@ class RxCadreTk(Frame):
         if not plots or not start or not end:
             return
         pname = askdirectory(initialdir='.')
+        if not pname:
+            return
         self.cadre.create_time_series_image(plots, 'TEST', start, end, pname)
 
     def create_wr_image(self):
@@ -131,6 +133,8 @@ class RxCadreTk(Frame):
         if not plots or not start or not end:
             return
         pname = askdirectory(initialdir='.')
+        if not pname:
+            return
         self.cadre.create_windrose_image(plots, 'TEST', start, end, pname)
 
     def export_ogr(self):
@@ -316,7 +320,6 @@ class RxCadreTk(Frame):
 
         # Plot data
         self.plot_frame = Frame(self)
-        self.plot_frame.pack(side=LEFT)
 
         # Event data
         self.event_frame = Frame(self)
@@ -326,6 +329,9 @@ class RxCadreTk(Frame):
         self.event_time_frame = Frame(self)
         self.event_time_frame.pack(side=LEFT)
         self.create_event_time_entries()
+
+        # Pack the plot frame
+        self.plot_frame.pack(side=LEFT)
 
         # Checkable options
         self.create_checkboxes()

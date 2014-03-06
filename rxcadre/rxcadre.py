@@ -578,7 +578,7 @@ class RxCadre:
                             '    <description>\n' \
                             '      <![CDATA[\n' % plot
         for image in images:
-            kml = kml +     '        < img src = "%s" />\n'  % image
+            kml = kml +     '        <img src = "%s" />\n'  % image
         kml = kml +         '        <table border="1">' \
                             '          <tr>\n' \
                             '            <th>Stats</th>\n' \
@@ -1087,12 +1087,10 @@ class RxCadre:
             if not data['timestamp']:
                 continue
             images = []
-            '''
             wr_file = self.create_windrose(data, plot, start, end,
                                                  plot + '_wr.png')
             if wr_file:
                 images.append(wr_file)
-            '''
             ts_file = self._create_time_series_image(data, plot, start, end,
                                                      plot + '_ts.png')
             if ts_file:
