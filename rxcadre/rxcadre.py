@@ -911,15 +911,20 @@ class RxCadre:
 
         if not plots:
             return
+        path = os.path.dirname(filename)
+        bname = os.path.splitext(os.path.basename(filename))[0]
         driver = ogr.GetDriverByName(frmt)
         if not driver:
             raise RxCadreError('Could not get OGR Driver')
-        ds = driver.CreateDataSource(filename)
+        if summary:
+            ds = driver.CreateDataSource(filename)
+        else:
+            ds = driver.CreateDataSource(path)
         if ds is None:
             raise RxCadreIOError('Could not create OGR datasource')
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4269)
-        layer = ds.CreateLayer(filename, srs, geom_type=ogr.wkbPoint)
+        layer = ds.CreateLayer(bname, srs, geom_type=ogr.wkbPoint)
         featureDefn = layer.GetLayerDefn()
 
         fieldDefn = ogr.FieldDefn('plot_id', ogr.OFTString)
@@ -945,7 +950,6 @@ class RxCadre:
 
             feature = ogr.Feature(featureDefn)
             feature.SetGeometry(point)
-            print(type(plot))
             feature.SetField('plot_id', str(plot))
             feature.SetField('spd_avg', stats['speed'][2])
             feature.SetField('spd_stdv', stats['speed'][3])
@@ -956,6 +960,28 @@ class RxCadre:
 
             point.Destroy()
             feature.Destroy()
+
+            if not summary:
+                tlayer = ds.CreateLayer(str(plot), None,
+                                        geom_type=ogr.wkbNone)
+                tfeatureDefn = tlayer.GetLayerDefn()
+                tfieldDefn = ogr.FieldDefn('plot_id', ogr.OFTString)
+                tfieldDefn.SetWidth(50)
+                tlayer.CreateField(tfieldDefn)
+                tfieldDefn = ogr.FieldDefn('time', ogr.OFTString)
+                tfieldDefn.SetWidth(50)
+                tlayer.CreateField(tfieldDefn)
+                for field in ('spd', 'dir'):
+                    tfieldDefn = ogr.FieldDefn(field, ogr.OFTReal)
+                    tlayer.CreateField(tfieldDefn)
+                for i, time in enumerate(data['timestamp']):
+                    tfeature = ogr.Feature(tfeatureDefn)
+                    tfeature.SetField('plot_id', str(plot))
+                    tfeature.SetField('time', str(time))
+                    tfeature.SetField('spd', data['speed'][i])
+                    tfeature.SetField('dir', data['direction'][i])
+                    tlayer.CreateFeature(tfeature)
+                    tfeature.Destroy()
 
         ds.Destroy()
 

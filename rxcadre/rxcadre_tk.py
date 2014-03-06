@@ -151,7 +151,8 @@ class RxCadreTk(Frame):
                                   initialdir='.')
         if not fname:
             return
-        self.cadre.export_ogr(plots, start, end, fname)
+        self.cadre.export_ogr(plots, start, end, fname, 'ESRI Shapefile',
+                              self.summary_only)
 
     def export_csv(self):
 
