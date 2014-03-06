@@ -67,6 +67,11 @@ sys.path.append(os.path.abspath('windrose'))
 
 from windrose import *
 
+from rxcadre_except import RxCadreError
+from rxcadre_except import RxCadreIOError
+from rxcadre_except import RxCadreInvalidDbError
+from rxcadre_except import RxCadreInvalidDataError
+
 ###############################################################################
 # Logging stuff.
 ###############################################################################
@@ -75,16 +80,6 @@ log_level = { 'debug'    : logging.DEBUG,
               'warning'  : logging.WARNING,
               'error'    : logging.ERROR,
               'critical' : logging.CRITICAL }
-
-###############################################################################
-# Generic module specific errors
-###############################################################################
-
-class RxCadreError(Exception):pass
-class RxCadreIOError(RxCadreError):pass
-class RxCadreInvalidDbError(RxCadreError):pass
-class RxCadreInvalidDataError(RxCadreError):pass
-
 
 def _import_date(string):
     '''
