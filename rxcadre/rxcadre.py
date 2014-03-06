@@ -935,6 +935,20 @@ class RxCadre:
             fieldDefn = ogr.FieldDefn(field, ogr.OFTReal)
             layer.CreateField(fieldDefn)
 
+        if not summary:
+            tlayer = ds.CreateLayer(bname + '_data', None,
+                                    geom_type=ogr.wkbNone)
+            tfeatureDefn = tlayer.GetLayerDefn()
+            tfieldDefn = ogr.FieldDefn('plot_id', ogr.OFTString)
+            tfieldDefn.SetWidth(50)
+            tlayer.CreateField(tfieldDefn)
+            tfieldDefn = ogr.FieldDefn('time', ogr.OFTString)
+            tfieldDefn.SetWidth(50)
+            tlayer.CreateField(tfieldDefn)
+            for field in ('spd', 'dir'):
+                tfieldDefn = ogr.FieldDefn(field, ogr.OFTReal)
+                tlayer.CreateField(tfieldDefn)
+
         table = 'cup_vane_obs'
 
         for plot in plots:
@@ -962,18 +976,6 @@ class RxCadre:
             feature.Destroy()
 
             if not summary:
-                tlayer = ds.CreateLayer(str(plot), None,
-                                        geom_type=ogr.wkbNone)
-                tfeatureDefn = tlayer.GetLayerDefn()
-                tfieldDefn = ogr.FieldDefn('plot_id', ogr.OFTString)
-                tfieldDefn.SetWidth(50)
-                tlayer.CreateField(tfieldDefn)
-                tfieldDefn = ogr.FieldDefn('time', ogr.OFTString)
-                tfieldDefn.SetWidth(50)
-                tlayer.CreateField(tfieldDefn)
-                for field in ('spd', 'dir'):
-                    tfieldDefn = ogr.FieldDefn(field, ogr.OFTReal)
-                    tlayer.CreateField(tfieldDefn)
                 for i, time in enumerate(data['timestamp']):
                     tfeature = ogr.Feature(tfeatureDefn)
                     tfeature.SetField('plot_id', str(plot))
