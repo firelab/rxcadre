@@ -13,5 +13,4 @@ Dependencies
 http://www.scipy.org/install.html
 
 - GDAL/OGR
-
-http://gisinternals/sdk
+http://gisinternals.com/sdk/
