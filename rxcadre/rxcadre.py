@@ -657,7 +657,8 @@ class RxCadre:
 
         return data
 
-    def _create_time_series_image(self, data, plt_title, start, end, filename=''):
+    def _create_time_series_image(self, data, plt_title, start, end,
+                                  filename='', gmax=None):
         '''
         Create a time series image for the plot over the time span
         '''
@@ -706,12 +707,12 @@ class RxCadre:
             ax1.set_ylabel('Speed(mph)', color = 'b')
             ax2 = fig.add_subplot(212)
             ax2.plot_date(time, data['direction'], 'r.')
-            ax2.set_ylabel('Direction', color='r')
+            ax2.set_ylabel('Direction(deg)', color='r')
 
         fig.autofmt_xdate()
         plt.suptitle('Plot %s from %s to %s' % (plt_title, 
-                     data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p'),
-                     data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p')))
+                     data['timestamp'][0].strftime('%m/%d/%Y %I:%M:%S %p UTC'),
+                     data['timestamp'][-1].strftime('%m/%d/%Y %I:%M:%S %p UTC')))
         if not filename:
             plt.show(1)
             plt.clf()

@@ -70,7 +70,11 @@ class RxCadreTk(Frame):
             self.plot_listbox.insert(END, plot[0])
 
     def create_db(self):
-        print('create')
+
+        fname=  asksaveasfilename(filetypes=(('SQLite files', '*.db')))
+        if not fname:
+            return
+        self.cadre.init_new_db(fname)
 
     def import_db(self):
         print('import')
@@ -197,7 +201,7 @@ class RxCadreTk(Frame):
         self.menubar = Menu(self)
         self.filemenu = Menu(self.menubar, tearoff=0)
         self.filemenu.add_command(label="Connect", command=self.connect_db)
-        #self.filemenu.add_command(label="Create", command=self.create_db)
+        self.filemenu.add_command(label="Create", command=self.create_db)
         #self.filemenu.add_command(label="Import", command=self.import_db)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.quit)
