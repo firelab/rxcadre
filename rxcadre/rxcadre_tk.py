@@ -38,6 +38,7 @@
 
 from Tkinter import *
 from tkFileDialog import askopenfilename, asksaveasfilename, askdirectory
+import tkMessageBox
 
 from rxcadre import RxCadre
 from rxcadre_except import RxCadreError
@@ -48,10 +49,23 @@ try:
 except ImportError:
     HAVE_OGR = False
 
-
 class RxCadreTk(Frame):
 
+    def messagebox(self, message, btype='warning'):
+        bt_dict = {'info':tkMessageBox.showinfo,
+                   'warning':tkMessageBox.showwarning}
+        if not message:
+            return
+        try:
+            bt_dict[btype]('RxCadre', message)
+        except:
+            pass
+        return
+
     def connect_db(self):
+
+        self.plot_listbox.delete(0, END)
+        self.event_listbox.delete(0, END)
         fname = askopenfilename(filetypes=(('SQLite files', '*.db'),
                                            ('All files', '*.*')),
                                 initialdir='../data')
@@ -62,6 +76,9 @@ class RxCadreTk(Frame):
         except RxCadreError as e:
             print(e)
         event_data = self.cadre.get_event_data()
+        if not event_data:
+            self.messagebox('There are no events associated with this db')
+            return
         for event in event_data.keys():
             self.event_listbox.insert(END, event)
         plot_data = self.cadre.get_plot_data()
@@ -71,7 +88,7 @@ class RxCadreTk(Frame):
 
     def create_db(self):
 
-        fname=  asksaveasfilename(filetypes=(('SQLite files', '*.db')))
+        fname=  asksaveasfilename(filetypes=(('SQLite files', '*.db'),))
         if not fname:
             return
         self.cadre.init_new_db(fname)
@@ -347,7 +364,7 @@ class RxCadreTk(Frame):
 
     def __init__(self, master=None):
         Frame.__init__(self, master)
-        self.cadre = None
+        self.cadre = RxCadre()
         self.pack()
         self.create()
 
