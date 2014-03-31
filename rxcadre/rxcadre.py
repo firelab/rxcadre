@@ -227,6 +227,19 @@ class RxCadre:
         return True
 
 
+    def read_sql(self, path):
+
+        fin = open(path)
+        if not fin:
+            return
+        sql = fin.read().split(';')
+        for stmt in sql:
+            self.cur.execute(stmt)
+        try:
+            db.commit()
+        except:
+            pass
+
     def event_time(self,name):
         if name[-3:] != '.db':
             name = name + '.db'
@@ -335,7 +348,16 @@ class RxCadre:
                                         obs_cols TEXT NOT NULL,
                                         obs_col_names TEXT)
               '''
-
+        cursor.execute(sql)
+        sql = '''CREATE TABLE cup_vane_obs(plot_id TEXT NOT NULL,
+                                           timestamp TEXT NOT NULL,
+                                           speed REAL,
+                                           gust REAL,
+                                           direction REAL,
+                                           PRIMARY KEY(plot_id, timestamp)
+                                           FOREIGN KEY(plot_id) REFERENCES
+                                           plot_location(plot_id))
+             '''
         cursor.execute(sql)
         db.commit()
         #update tables, update events, set db_picker to filename
@@ -411,7 +433,6 @@ class RxCadre:
         for row in self.cur.fetchall():
             events[row[0]] = (row[1], row[2])
         return events
-
 
     def get_plot_data(self, plot_name=None):
         '''
@@ -709,6 +730,8 @@ class RxCadre:
             #ax1.plot_date(time, data['gust'], 'g-')
             ax1.set_xlabel('Time (s)')
             ax1.set_ylabel('Speed(mph)', color = 'b')
+            if gmax:
+                ax1.set_ylim(0, gmax)
             ax2 = fig.add_subplot(212)
             ax2.plot_date(time, data['direction'], 'r.')
             ax2.set_ylabel('Direction(deg)', color='r')
@@ -725,7 +748,7 @@ class RxCadre:
             plt.clf()
         return filename
 
-    def create_time_series_image(self, plots, title, start, end, path):
+    def create_time_series_image(self, plots, title, start, end, path, gmax=None):
 
         table = 'cup_vane_obs'
         for plot in plots:
@@ -733,7 +756,7 @@ class RxCadre:
                 table = 'fbp_obs'
             filename = os.path.join(path, plot + '_ts.png')
             data = self.extract_obs_data(table, plot, start, end)
-            self._create_time_series_image(data, title, start, end, filename)
+            self._create_time_series_image(data, title, start, end, filename, gmax)
 
     def create_windrose(self, data, plt_title, start, end, filename=''):
         '''
@@ -1302,6 +1325,88 @@ time, date, plotID, wind speed, wind direction and wind gust column
                 else:
                     self.create_kmz(plot, plot + '.kmz', None, start, end,
                                   plot + '_ts.png', '', data)
+
+    def add_all_event(self):
+        sql = """SELECT count(*) FROM event where event_name='ALL'"""
+        self.cur.execute(sql)
+        if self.cur.fetchone()[0]:
+            return
+        obs_tables = self.get_obs_table_names()
+        if not obs_tables:
+            print('no obs tables')
+            return
+        sql = 'SELECT MIN(timestamp), MAX(timestamp) FROM %s'
+        tmin = _export_date(datetime.datetime.max.replace(year=2100))
+        tmax = _export_date(datetime.datetime.min.replace(year=1901))
+        for table in obs_tables:
+            self.cur.execute(sql % table)
+            times = self.cur.fetchone()
+            if times[0] < tmin:
+                tmin = times[0]
+            if times[1] > tmax:
+                tmax = times[1]
+        sql = "INSERT INTO event VALUES('ALL', ?, ?)"
+        self.cur.execute(sql, (tmin, tmax))
+
+    def import_wind_data(self, csv_file, volatile=False, prog_func=None):
+        """
+        Read in the data for the hobo loggers.  We currently have this as a
+        large single csv.
+
+        param volatile: turn of journaling in sqlite, much faster, but may lose
+                        data
+
+        param prog_func: optional progress call back in the form:
+                         prog_func(float) that takes a decimal fraction p
+                         where:
+                         0 =< p =< 1.0
+        """
+
+        if volatile:
+            self.cur.execute('PRAGMA journal_mode=OFF')
+
+        fin = open(csv_file)
+        sql = "INSERT INTO cup_vane_obs VALUES(?, ?, ?, ?, ?)"
+        i = 0
+        fin.readline()
+        lines = fin.readlines()
+        if prog_func:
+            count = len(lines)
+            inc = int(float(count) / 100)
+            prog_func(0.0)
+
+        self.cur.execute('BEGIN')
+        for line in lines:
+            if not line:
+                continue
+            line = line.split(',')
+            plot = '-'.join(line[6:8])
+            data = []
+            #
+            # FIXME: Currently, this plot has a bad timestamp in the giant
+            #        file, skip it for now, and load the data from L1G-A13.csv
+            #
+            if plot == 'L1G-A13':
+                continue
+            data.append(plot)
+            data.append(_import_date(' '.join(line[1:3])))
+            data.append(float(line[3]))
+            data.append(float(line[4]))
+            data.append(float(line[5]))
+            self.cur.execute(sql, tuple(data))
+            i += 1
+            if not volatile and i % 1000 == 0:
+                self.db.commit()
+            if prog_func:
+                prog_func(float(i) / count)
+
+        self.cur.execute('END')
+        self.db.commit()
+        if volatile:
+            self.cur.execute('PRAGMA journal_mode=ON')
+
+        if prog_func:
+            prog_func(1.0)
 
 def rxcadre_main(args):
     '''

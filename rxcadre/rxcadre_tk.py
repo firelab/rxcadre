@@ -62,11 +62,22 @@ class RxCadreTk(Frame):
             pass
         return
 
+    def update_listboxes(self):
+        event_data = self.cadre.get_event_data()
+        if not event_data:
+            self.messagebox('There are no events associated with this db')
+            return
+        for event in event_data.keys():
+            self.event_listbox.insert(END, event)
+        plot_data = self.cadre.get_plot_data()
+        for plot in plot_data:
+            self.plot_listbox.insert(END, plot[0])
+
     def connect_db(self):
 
         self.plot_listbox.delete(0, END)
         self.event_listbox.delete(0, END)
-        fname = askopenfilename(filetypes=(('SQLite files', '*.db'),
+        fname = askopenfilename(filetypes=(('SQLite files', '*.db *.sqlite'),
                                            ('All files', '*.*')),
                                 initialdir='../data')
         if not fname:
@@ -75,26 +86,36 @@ class RxCadreTk(Frame):
             self.cadre = RxCadre(fname)
         except RxCadreError as e:
             print(e)
-        event_data = self.cadre.get_event_data()
-        if not event_data:
-            self.messagebox('There are no events associated with this db')
-            return
-        for event in event_data.keys():
-            self.event_listbox.insert(END, event)
-        plot_data = self.cadre.get_plot_data()
-        #self.plot_listbox.insert(END, 'ALL')
-        for plot in plot_data:
-            self.plot_listbox.insert(END, plot[0])
+        self.update_listboxes()
 
     def create_db(self):
 
-        fname=  asksaveasfilename(filetypes=(('SQLite files', '*.db'),))
+        fname = asksaveasfilename(filetypes=(('SQLite files', '*.db *.sqlite'),))
         if not fname:
             return
         self.cadre.init_new_db(fname)
+        self.cadre = RxCadre(fname)
 
     def import_db(self):
-        print('import')
+
+        fname = askopenfilename(filetypes=(('CSV files', '*.txt *.csv'),),
+                                initialdir='../data')
+        if not fname:
+            return
+        try:
+            self.cadre.import_wind_data(fname, volatile=True)
+        except RxCadreError as e:
+            messagebox(e)
+        self.cadre_thread.join()
+        self.update_listboxes()
+
+    def read_sql_file(self):
+
+        fname = askopenfilename(filetypes=(('SQL files', '*.sql *.txt'),))
+        if not fname:
+            return
+        self.cadre.read_sql(fname)
+        self.update_listboxes()
 
     def load_event_data(self):
         '''
@@ -138,7 +159,9 @@ class RxCadreTk(Frame):
         pname = askdirectory(initialdir='.')
         if not pname:
             return
-        self.cadre.create_time_series_image(plots, 'TEST', start, end, pname)
+        gmax = float(self.gmax_spinbox.get())
+        print("Using %f" % gmax)
+        self.cadre.create_time_series_image(plots, 'TEST', start, end, pname, gmax)
 
     def create_wr_image(self):
         '''
@@ -219,7 +242,9 @@ class RxCadreTk(Frame):
         self.filemenu = Menu(self.menubar, tearoff=0)
         self.filemenu.add_command(label="Connect", command=self.connect_db)
         self.filemenu.add_command(label="Create", command=self.create_db)
-        #self.filemenu.add_command(label="Import", command=self.import_db)
+        self.filemenu.add_command(label="Read sql", command=self.read_sql_file)
+        #self.filemenu.add_command(label="Add 'ALL' event", command=self.add_all)
+        self.filemenu.add_command(label="Import wind data", command=self.import_db)
         self.filemenu.add_separator()
         self.filemenu.add_command(label="Exit", command=self.quit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
@@ -283,6 +308,12 @@ class RxCadreTk(Frame):
         else:
             self.summary_only = 0
 
+    def set_gmax(self):
+        if self.use_gmax == 0:
+            self.use_gmax = 1
+        else:
+            self.use_gmax = 0
+
     def create_checkboxes(self):
         '''
         Create various checkboxes for output options.
@@ -302,6 +333,12 @@ class RxCadreTk(Frame):
         self.summary_checkbox.toggle()
         self.summary_only = 1
 
+    def create_gmax_spinbox(self):
+
+        self.gmax_label = Label(self.event_time_frame, text='Y maximum:')
+        self.gmax_label.pack()
+        self.gmax_spinbox = Spinbox(self.event_time_frame, from_=0, to_=100)
+        self.gmax_spinbox.pack()
 
     def create_out_buttons(self):
         '''
@@ -356,6 +393,8 @@ class RxCadreTk(Frame):
 
         # Checkable options
         self.create_checkboxes()
+        # Global max.
+        self.create_gmax_spinbox()
 
         # Timeseries Image
         self.ts_frame = Frame(self)
