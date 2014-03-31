@@ -584,6 +584,10 @@ class RxCadre:
                             '            <th>Stats</th>\n' \
                             '          </tr>\n'
         for key in stats.keys():
+            if key == 'gust': continue
+            kml = kml +     '          <tr>\n' \
+                            '            <td colspan="2">%s</td>\n' % key.title()
+            kml = kml +     '          </tr>\n'
             for i, s in enumerate(stats[key]):
                 kml = kml + '          <tr>\n' \
                             '            <td>%s</td>\n' \
