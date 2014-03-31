@@ -154,13 +154,12 @@ class RxCadreTk(Frame):
         plots = [data[int(item)] for item in items]
         start = self.event_start_entry.get()
         end = self.event_end_entry.get()
-        if not plots or not start or not end:
+        if not plots:# or not start or not end:
             return
         pname = askdirectory(initialdir='.')
         if not pname:
             return
         gmax = float(self.gmax_spinbox.get())
-        print("Using %f" % gmax)
         self.cadre.create_time_series_image(plots, 'TEST', start, end, pname, gmax)
 
     def create_wr_image(self):

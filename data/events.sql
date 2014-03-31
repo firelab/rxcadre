@@ -44,5 +44,6 @@ INSERT INTO event(event_name, event_start, event_end) VALUES('S8',datetime('2012
 INSERT INTO event(event_name, event_start, event_end) VALUES('S9',datetime('2012-11-07T18:54'),datetime('2012-11-07T20:10'));
 INSERT INTO event(event_name, event_start, event_end) VALUES('L2G',datetime('2012-11-10T18:23'),datetime('2012-11-10T23:59'));
 INSERT INTO event(event_name, event_start, event_end) VALUES('L2F',datetime('2012-11-11T18:02'),datetime('2012-11-11T23:59'));
+INSERT INTO EVENT(EVENT_NAME, EVENT_START, EVENT_END) VALUES('ALL',datetime('2012-11-11T22:26'),datetime('2012-11-01T12:49:58'));
 COMMIT;
 
