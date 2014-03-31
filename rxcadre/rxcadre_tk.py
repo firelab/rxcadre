@@ -142,6 +142,11 @@ class RxCadreTk(Frame):
             for plot in plots:
                 if plot[0].startswith(event):
                     self.plot_listbox.insert(END, plot[0])
+        else:
+            plots = self.cadre.get_plot_data()
+            self.plot_listbox.delete(0, END)
+            for plot in plots:
+                self.plot_listbox.insert(END, plot[0])
 
     def create_ts_image(self):
         '''
