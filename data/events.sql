@@ -34,15 +34,15 @@
  ****************************************************************************/
 
 BEGIN;
-INSERT INTO event VALUES('S6',datetime('2012-10-3119:11'),datetime('2012-10-31T20:00'));
-INSERT INTO event VALUES('S5',datetime('2012-11-01T18:10'),datetime('2012-11-01T19:30'));
-INSERT INTO event VALUES('S4',datetime('2012-11-01T19:35'),datetime('2012-11-01T21:15'));
-INSERT INTO event VALUES('S3',datetime('2012-11-01T21:20'),datetime('2012-11-01T22:30'));
-INSERT INTO event VALUES('L1G',datetime('2012-11-04T18:31'),datetime('2012-11-04T23:59'));
-INSERT INTO event VALUES('S7',datetime('2012-11-07T17:25'),datetime('2012-11-07T18:50'));
-INSERT INTO event VALUES('S8',datetime('2012-11-07T20:16'),datetime('2012-11-07T21:30'));
-INSERT INTO event VALUES('S9',datetime('2012-11-07T18:54'),datetime('2012-11-07T20:10'));
-INSERT INTO event VALUES('L2G',datetime('2012-11-10T18:23'),datetime('2012-11-10T23:59'));
-INSERT INTO event VALUES('L2F',datetime('2012-11-11T18:02'),datetime('2012-11-11T23:59'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S6',datetime('2012-10-3119:11'),datetime('2012-10-31T20:00'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S5',datetime('2012-11-01T18:10'),datetime('2012-11-01T19:30'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S4',datetime('2012-11-01T19:35'),datetime('2012-11-01T21:15'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S3',datetime('2012-11-01T21:20'),datetime('2012-11-01T22:30'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('L1G',datetime('2012-11-04T18:31'),datetime('2012-11-04T23:59'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S7',datetime('2012-11-07T17:25'),datetime('2012-11-07T18:50'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S8',datetime('2012-11-07T20:16'),datetime('2012-11-07T21:30'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('S9',datetime('2012-11-07T18:54'),datetime('2012-11-07T20:10'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('L2G',datetime('2012-11-10T18:23'),datetime('2012-11-10T23:59'));
+INSERT INTO event(event_name, event_start, event_end) VALUES('L2F',datetime('2012-11-11T18:02'),datetime('2012-11-11T23:59'));
 COMMIT;
 
