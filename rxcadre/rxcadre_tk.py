@@ -199,12 +199,15 @@ class RxCadreTk(Frame):
         end = self.event_end_entry.get()
         if not plots or not start or not end:
             return
-        fname = asksaveasfilename(filetypes=(('ESRI Shapefile', '*.shp'),),
+        fname = asksaveasfilename(filetypes=(('OGR Formats', '*.shp *.csv'),),
                                   initialdir='.')
         if not fname:
             return
-        self.cadre.export_ogr(plots, start, end, fname, 'ESRI Shapefile',
-                              self.summary_only)
+        if fname.endswith('.csv' ):
+            frmt = 'CSV'
+        else:
+            frmt = 'ESRI Shapefile'
+        self.cadre.export_ogr(plots, start, end, fname, frmt, self.summary_only)
 
     def export_csv(self):
 
